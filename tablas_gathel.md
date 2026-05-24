@@ -377,17 +377,6 @@
 
 ---
 
-## aiValidationStatuses
-
-* aiValidationStatusId INT IDENTITY(1,1) PK
-* name VARCHAR(40)
-* description VARCHAR(120)
-* createdAt DATETIME2
-* updatedAt DATETIME2
-* isDeleted BIT
-
----
-
 ## processingStatuses
 
 * processingStatusId INT IDENTITY(1,1) PK
@@ -686,6 +675,26 @@
 ### Performance
 
 * INDEX IX_exchangeRates_currencyId_exchangeDateTime (currencyId, exchangeDateTime DESC)
+
+---
+
+## propositionEvents
+
+* propositionEventId BIGINT IDENTITY(1,1) PK
+* propositionId BIGINT FK propositions
+* propositionEventTypeId INT FK propositionEventTypes
+* personId INT FK people
+* eventDescription VARCHAR(255)
+* correlationId VARCHAR(100)
+* occurredAt DATETIME2
+* createdAt DATETIME2
+* updatedAt DATETIME2
+* isDeleted BIT
+
+### Performance
+
+* INDEX IX_propositionEvents_propositionId_occurredAt (propositionId, occurredAt DESC)
+* INDEX IX_propositionEvents_eventTypeId (propositionEventTypeId)
 
 ---
 
