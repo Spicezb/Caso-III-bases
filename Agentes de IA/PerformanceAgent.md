@@ -860,3 +860,466 @@ Diseño de tablas a revisar:
 * createdAt TIMESTAMP
 * updatedAt TIMESTAMP
 * isDeleted BOOLEAN
+
+
+---
+
+
+# Respuesta de la IA
+# Resumen de cambios sugeridos y aplicados — Revisión de Performance SQL Server 2022
+
+## Objetivo de la revisión
+
+Se realizó una revisión enfocada exclusivamente en rendimiento, concurrencia y eficiencia operativa del diseño de base de datos para SQL Server 2022, considerando:
+
+* Alto volumen de inserciones.
+* Pocas actualizaciones.
+* Consultas frecuentes del MVP.
+* Operaciones financieras.
+* Procesamiento de eventos.
+* Actividad social.
+* Auditoría y trazabilidad.
+* Uso obligatorio de Stored Procedures para escrituras.
+
+---
+
+# Cambios aplicados al diseño
+
+## 1. Migración de tipos incompatibles con SQL Server
+
+### Cambios realizados
+
+| Antes     | Después           |
+| --------- | ----------------- |
+| SERIAL    | INT IDENTITY(1,1) |
+| TIMESTAMP | DATETIME2         |
+| BOOLEAN   | BIT               |
+| NUMERIC   | DECIMAL           |
+| BYTEA     | VARBINARY(MAX)    |
+| JSON      | NVARCHAR(MAX)     |
+
+### Justificación técnica
+
+El diseño original utilizaba tipos más cercanos a PostgreSQL. Se adaptó completamente a SQL Server 2022 para evitar incompatibilidades y mejorar rendimiento nativo.
+
+---
+
+# 2. Optimización de tablas de alto crecimiento
+
+## Tablas modificadas a BIGINT
+
+Se cambiaron claves primarias de tablas de crecimiento masivo:
+
+* propositions
+* propositionEvents
+* propositionVotes
+* propositionLikes
+* propositionComments
+* propositionEvidence
+* predictions
+* aiValidationResults
+* reports
+* penalties
+* walletBalanceHistory
+* walletTransactions
+* paymentAttempts
+* payments
+* withdrawalRequests
+* withdrawalAttempts
+* financialMovements
+* commissions
+* notifications
+* propositionStatusHistory
+* predictionStatusHistory
+* withdrawalRequestStatusHistory
+* auditLogs
+* auditLogDetails
+* systemProcessingLogs
+
+### Justificación técnica
+
+Estas tablas crecerán rápidamente debido a:
+
+* eventos sociales,
+* historial financiero,
+* auditoría,
+* predicciones,
+* procesamiento AI,
+* notificaciones.
+
+Usar `INT` podría provocar agotamiento de IDs a largo plazo.
+
+---
+
+# 3. Índices agregados para Foreign Keys
+
+## Índices agregados
+
+Se agregaron índices a Foreign Keys críticas en:
+
+* propositions
+* predictions
+* walletTransactions
+* payments
+* withdrawalRequests
+* reports
+* notifications
+* propositionEvents
+* auditLogs
+* commissions
+* histories
+* socialAccounts
+* cities
+* addresses
+
+### Justificación técnica
+
+SQL Server no crea índices automáticamente para Foreign Keys.
+
+Sin estos índices:
+
+* los JOINs se vuelven costosos,
+* aumentan los scans,
+* empeoran los deletes/updates referenciados,
+* empeoran consultas del MVP.
+
+---
+
+# 4. Índices compuestos para consultas reales del MVP
+
+## Índices agregados
+
+### Propositions
+
+```sql id="f1x1sq"
+(propositionStatusId, endPredictionDateTime, createdAt DESC)
+```
+
+### Predictions
+
+```sql id="v7c1vz"
+(propositionId, predictionStatusId, createdAt)
+```
+
+### Notifications
+
+```sql id="vxmtgf"
+(personId, isRead, createdAt DESC)
+```
+
+### WalletTransactions
+
+```sql id="l1dfvt"
+(originWalletId, transactionDateTime DESC)
+(destinationWalletId, transactionDateTime DESC)
+```
+
+### Payments
+
+```sql id="5gzvw9"
+(personId, processedAt DESC)
+```
+
+### WithdrawalRequests
+
+```sql id="m5m0ry"
+(personId, requestedAt DESC)
+```
+
+### Justificación técnica
+
+Estos índices fueron diseñados específicamente para soportar:
+
+* Login.
+* Feed de proposiciones activas.
+* Historial financiero.
+* Actividad reciente.
+* Notificaciones.
+* Distribución de ganancias.
+* Consultas por wallet.
+* Consultas cronológicas.
+
+---
+
+# 5. Índices para trazabilidad distribuida
+
+## Índices agregados
+
+Se agregaron índices para:
+
+* correlationId
+* batchId
+* idempotencyKey
+
+en tablas financieras y de eventos.
+
+### Justificación técnica
+
+Estas columnas son críticas para:
+
+* sistemas distribuidos,
+* reintentos,
+* deduplicación,
+* procesamiento asincrónico,
+* debugging,
+* trazabilidad.
+
+---
+
+# 6. Protección contra duplicados financieros
+
+## Índices UNIQUE agregados
+
+### Tablas afectadas
+
+* walletTransactions
+* payments
+* withdrawalRequests
+
+### Columnas
+
+```sql id="lhxvx8"
+idempotencyKey
+```
+
+### Justificación técnica
+
+Evita:
+
+* pagos duplicados,
+* reintentos inconsistentes,
+* doble procesamiento financiero.
+
+---
+
+# 7. Optimización de concurrencia de wallets
+
+## Cambios aplicados
+
+Se mantuvo y reforzó:
+
+```sql id="26okqr"
+rowVersion ROWVERSION
+```
+
+en:
+
+* walletCurrentBalances
+
+### Justificación técnica
+
+Permite:
+
+* optimistic concurrency,
+* detección de conflictos,
+* evitar race conditions,
+* mejorar throughput financiero.
+
+---
+
+# 8. Optimización para consultas cronológicas
+
+## Índices agregados con fechas descendentes
+
+Se agregaron índices `DESC` en:
+
+* comments
+* reports
+* predictions
+* notifications
+* transactions
+* logs
+* balances
+* histories
+
+### Justificación técnica
+
+Las consultas principales del sistema son:
+
+* actividad reciente,
+* historial,
+* eventos recientes,
+* movimientos recientes.
+
+Los índices descendentes reducen lecturas innecesarias.
+
+---
+
+# 9. Optimización de JSON para SQL Server
+
+## Cambios realizados
+
+Campos JSON fueron convertidos a:
+
+```sql id="2mjlwm"
+NVARCHAR(MAX)
+```
+
+### Tablas afectadas
+
+* propositionEvents
+* aiValidationResults
+* paymentMethods
+* withdrawalAttempts
+
+### Justificación técnica
+
+SQL Server no tiene tipo JSON nativo.
+
+Se minimizó el uso de JSON únicamente donde era estrictamente necesario.
+
+---
+
+# 10. Agregado de columna personId en financialMovements
+
+## Cambio aplicado
+
+Se agregó:
+
+```sql id="eew5tb"
+personId INT FK people
+```
+
+### Justificación técnica
+
+Reduce JOINs complejos para:
+
+* historial financiero,
+* balances,
+* auditoría,
+* movimientos monetarios.
+
+---
+
+# 11. Optimización para actividad social
+
+## Índices agregados
+
+### propositionComments
+
+```sql id="jefnfc"
+(propositionId, commentedAt DESC)
+(personId, commentedAt DESC)
+```
+
+### propositionVotes
+
+```sql id="qln77i"
+(propositionId)
+(personId)
+```
+
+### propositionLikes
+
+```sql id="szq5zy"
+(propositionId)
+(personId)
+```
+
+### Justificación técnica
+
+Reduce costo de:
+
+* feeds sociales,
+* perfiles de actividad,
+* conteos,
+* engagement.
+
+---
+
+# 12. Preparación para particionamiento futuro
+
+## Tablas identificadas
+
+* propositionEvents
+* predictions
+* walletTransactions
+* payments
+* financialMovements
+* auditLogs
+
+## Columnas preparadas
+
+* eventDateTime
+* predictionDateTime
+* transactionDateTime
+* processedAt
+* actionTimestamp
+
+### Justificación técnica
+
+Permite implementar:
+
+* partition pruning,
+* archivado,
+* mantenimiento eficiente,
+* consultas históricas más rápidas.
+
+---
+
+# 13. Optimización de auditoría
+
+## Índices agregados
+
+### auditLogs
+
+```sql id="pnyzxr"
+(tableName, recordId)
+(personId, actionTimestamp DESC)
+(correlationId)
+```
+
+### Justificación técnica
+
+Mejora:
+
+* trazabilidad,
+* debugging,
+* auditoría financiera,
+* reconstrucción de eventos.
+
+---
+
+# 14. Estandarización temporal
+
+## Cambio aplicado
+
+Todo el sistema fue migrado a:
+
+```sql id="kcz6c9"
+DATETIME2
+```
+
+### Justificación técnica
+
+`DATETIME2`:
+
+* consume menos espacio,
+* tiene mejor precisión,
+* tiene mejor compatibilidad con SQL Server 2022,
+* mejora índices temporales.
+
+---
+
+# 15. Preparación para Stored Procedures transaccionales
+
+## Diseño preparado para SPs de:
+
+* Crear proposición.
+* Registrar predicción.
+* Actualizar wallet.
+* Distribuir ganancias.
+* Procesar pagos.
+* Procesar retiros.
+* Aplicar penalizaciones.
+* Cerrar proposiciones.
+
+### Justificación técnica
+
+El diseño ahora soporta:
+
+* concurrencia,
+* trazabilidad,
+* idempotencia,
+* transacciones financieras seguras,
+* procesamiento distribuido.

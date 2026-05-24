@@ -770,3 +770,448 @@ Diseño de tablas a revisar:
 * createdAt TIMESTAMP
 * updatedAt TIMESTAMP
 * isDeleted BOOLEAN
+
+
+---
+
+
+# Respuesta de la IA
+# Financial Integrity Agent — Resumen de cambios sugeridos y aplicados
+
+## Objetivo de la revisión
+
+La revisión tuvo como objetivo fortalecer la integridad financiera, trazabilidad contable y consistencia transaccional del sistema Gathel bajo escenarios de:
+
+- Predicciones con puntos virtuales.
+- Predicciones con dinero real.
+- Distribución proporcional de recompensas.
+- Penalizaciones automáticas.
+- Devoluciones.
+- Compras de puntos.
+- Retiros monetarios.
+- Alta concurrencia.
+- Prevención de doble gasto y doble retiro.
+- Auditoría financiera completa.
+
+---
+
+# Cambios aplicados
+
+## 1. Separación entre fondos disponibles y fondos bloqueados
+
+### Problema detectado
+
+El diseño original no diferenciaba entre:
+
+- saldo disponible
+- saldo retenido/bloqueado
+
+Esto permitía riesgo de:
+
+- doble gasto
+- doble retiro
+- apuestas sobre fondos ya comprometidos
+
+### Cambio aplicado
+
+Se agregaron:
+
+### Tabla `wallets`
+
+- `availablePointsAmount`
+- `lockedPointsAmount`
+
+### Tabla `moneyWallets` (nueva)
+
+- `availableAmount`
+- `lockedAmount`
+
+### Beneficio
+
+Permite:
+
+- bloquear fondos durante predicciones activas
+- bloquear fondos durante retiros
+- liberar fondos posteriormente
+- mantener integridad financiera bajo concurrencia
+
+---
+
+# 2. Creación de wallets monetarias independientes
+
+### Problema detectado
+
+El diseño original solo soportaba balances de puntos.
+
+No existía una estructura formal para dinero real.
+
+### Cambio aplicado
+
+Nueva tabla:
+
+## `moneyWallets`
+
+Permite:
+
+- balances monetarios por moneda
+- fondos disponibles
+- fondos bloqueados
+- control multimoneda
+
+### Beneficio
+
+Separa completamente:
+
+- economía virtual
+- dinero real
+
+y permite trazabilidad financiera correcta.
+
+---
+
+# 3. Creación de ledger monetario transaccional
+
+### Problema detectado
+
+No existía historial financiero monetario auditable.
+
+### Cambio aplicado
+
+Nueva tabla:
+
+## `moneyWalletTransactions`
+
+Incluye:
+
+- wallet origen
+- wallet destino
+- tipo de transacción
+- moneda
+- tipo de cambio
+- snapshot del tipo de cambio
+- dirección de transacción
+- idempotencia
+
+### Beneficio
+
+Permite:
+
+- reconstrucción de balances
+- auditoría financiera
+- prevención de duplicados
+- trazabilidad ACID
+
+---
+
+# 4. Implementación de holds financieros
+
+### Problema detectado
+
+No existía mecanismo formal para reservar fondos.
+
+### Cambio aplicado
+
+Nueva tabla:
+
+## `walletHolds`
+
+Incluye:
+
+- puntos bloqueados
+- dinero bloqueado
+- expiración
+- liberación
+- referencia financiera
+
+### Beneficio
+
+Permite:
+
+- bloquear apuestas
+- bloquear retiros
+- liberar fondos correctamente
+- evitar uso concurrente de fondos
+
+---
+
+# 5. Fortalecimiento financiero de predictions
+
+### Problema detectado
+
+Las predicciones no tenían control financiero suficiente.
+
+### Cambios aplicados
+
+Se agregaron:
+
+- `lockedPointsAmount`
+- `lockedMoneyAmount`
+- `exchangeRateSnapshot`
+- `financialState`
+
+Además:
+
+
+CHECK (pointsAmount <= 1)
+
+
+y:
+
+
+CHECK (NOT (pointsAmount = 0 AND moneyAmount = 0))
+
+### Beneficio
+
+Permite:
+
+* validar reglas de negocio
+* congelar montos reales
+* auditar estados financieros
+* evitar apuestas inválidas
+
+---
+
+# 6. Historial de incrementos de apuesta
+
+### Problema detectado
+
+El sistema permitía modificar apuestas sin trazabilidad.
+
+### Cambio aplicado
+
+Nueva tabla:
+
+## `predictionFundingEvents`
+
+Registra:
+
+* monto anterior
+* monto nuevo
+* delta
+* cambios en puntos
+* cambios en dinero
+
+### Beneficio
+
+Permite:
+
+* auditoría de modificaciones
+* trazabilidad histórica
+* reconstrucción de apuestas
+
+---
+
+# 7. Fortalecimiento de walletTransactions
+
+### Problema detectado
+
+No existía dirección financiera explícita.
+
+### Cambio aplicado
+
+Nueva columna:
+
+* `transactionDirection`
+
+### Beneficio
+
+Permite distinguir:
+
+* débito
+* crédito
+* transferencia
+* reverso
+
+---
+
+# 8. Snapshot inmutable de tipos de cambio
+
+### Problema detectado
+
+El sistema dependía de tipos de cambio mutables.
+
+### Cambios aplicados
+
+Se agregó:
+
+* `exchangeRateSnapshot`
+
+en:
+
+* `predictions`
+* `payments`
+* `paymentAttempts`
+* `withdrawalRequests`
+* `withdrawalAttempts`
+* `financialMovements`
+* `moneyWalletTransactions`
+* `commissions`
+
+### Beneficio
+
+Permite:
+
+* auditorías históricas exactas
+* consistencia monetaria
+* evitar recalcular operaciones antiguas con tasas nuevas
+
+---
+
+# 9. Fortalecimiento de retiros
+
+### Problema detectado
+
+Los retiros podían provocar doble uso de fondos.
+
+### Cambios aplicados
+
+En `withdrawalRequests`:
+
+* `moneyWalletId`
+* `walletHoldId`
+
+En `withdrawalAttempts`:
+
+
+UNIQUE(externalTransactionId, withdrawalRequestId)
+
+### Beneficio
+
+Permite:
+
+* trazabilidad completa
+* prevención de doble retiro
+* conciliación financiera
+
+---
+
+# 10. Fortalecimiento de payments
+
+### Problema detectado
+
+Riesgo de pagos duplicados.
+
+### Cambio aplicado
+
+
+UNIQUE(externalTransactionId, paymentMethodId)
+
+### Beneficio
+
+Evita:
+
+* duplicación de pagos
+* doble acreditación
+* inconsistencias financieras
+
+---
+
+# 11. Fortalecimiento de financialMovements
+
+### Problema detectado
+
+La estructura original no era suficientemente auditable.
+
+### Cambios aplicados
+
+Se agregaron:
+
+* `sourceMoneyWalletId`
+* `destinationMoneyWalletId`
+* `movementDirection`
+* `exchangeRateSnapshot`
+
+### Beneficio
+
+Permite:
+
+* trazabilidad financiera real
+* reconstrucción de flujos monetarios
+* auditoría contable
+
+---
+
+# 12. Fortalecimiento de commissions
+
+### Problema detectado
+
+No existía suficiente evidencia matemática del cálculo.
+
+### Cambios aplicados
+
+Se agregaron:
+
+* `basePoolAmount`
+* `winnerPoolAmount`
+* `loserPoolAmount`
+* `exchangeRateSnapshot`
+
+### Beneficio
+
+Permite auditar:
+
+* cálculo proporcional
+* distribución de ganancias
+* deducción de comisiones
+
+---
+
+# 13. Integración financiera de penalties
+
+### Problema detectado
+
+Las penalizaciones no tenían referencia financiera directa.
+
+### Cambio aplicado
+
+En `penalties`:
+
+* `walletTransactionId`
+
+### Beneficio
+
+Permite relacionar:
+
+* penalización
+* movimiento real de puntos
+
+---
+
+# 14. Protección contra concurrencia
+
+### Cambios aplicados
+
+Se agregaron o reforzaron:
+
+* `ROWVERSION`
+* `idempotencyKey`
+* `correlationId`
+* restricciones UNIQUE
+* snapshots financieros
+
+### Beneficio
+
+Reduce riesgos de:
+
+* doble procesamiento
+* retries inconsistentes
+* race conditions
+* duplicados financieros
+
+---
+
+# Resultado final de la revisión
+
+El diseño actualizado ahora soporta:
+
+* wallets separadas para puntos y dinero real
+* balances disponibles y bloqueados
+* trazabilidad financiera completa
+* historial de apuestas
+* auditoría de comisiones
+* prevención de doble gasto
+* prevención de doble retiro
+* snapshot histórico de tipos de cambio
+* holds financieros
+* ledger monetario auditable
+* mayor compatibilidad con Stored Procedures ACID y transacciones SQL Server 2022

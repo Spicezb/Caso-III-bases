@@ -740,3 +740,473 @@ Diseño de tablas a revisar:
 * createdAt TIMESTAMP
 * updatedAt TIMESTAMP
 * isDeleted BOOLEAN
+
+
+---
+
+
+# Respuesta de la IA
+# Resumen de Cambios de Seguridad Aplicados - Security Agent Review
+
+## Objetivo de la revisión
+
+Se realizó una auditoría especializada de seguridad sobre el diseño de base de datos de Gathel para SQL Server 2022, enfocada en:
+
+- Protección de datos sensibles.
+- Autenticación y autorización.
+- Seguridad financiera.
+- Manejo seguro de tokens y sesiones.
+- Auditoría y trazabilidad.
+- Prevención de abuso interno.
+- Preparación para Row-Level Security y Dynamic Data Masking.
+- Compatibilidad con laboratorios de seguridad SQL Server.
+
+---
+
+# Cambios aplicados al diseño
+
+## 1. Rediseño de almacenamiento de contraseñas
+
+### Problema detectado
+La tabla `people` almacenaba únicamente:
+
+
+password VARBINARY(MAX)
+
+No existía separación entre:
+
+* hash,
+* salt,
+* algoritmo,
+* metadata de seguridad.
+
+### Cambios aplicados
+
+Se reemplazó el campo anterior por:
+
+
+passwordHash VARBINARY(512)
+passwordSalt VARBINARY(256)
+passwordAlgorithm VARCHAR(40)
+passwordChangedAt DATETIME2
+failedLoginAttempts INT
+lockedUntil DATETIME2
+
+### Beneficio
+
+Permite:
+
+* uso de Argon2/bcrypt/scrypt,
+* rotación de algoritmos,
+* bloqueo automático,
+* trazabilidad criptográfica,
+* mitigación de rainbow tables.
+
+---
+
+# 2. Separación segura de tokens OAuth y refresh tokens
+
+### Problema detectado
+
+Los tokens estaban almacenados directamente dentro de:
+
+* `socialAccounts`
+* `authSessions`
+
+### Cambios aplicados
+
+Se crearon nuevas tablas:
+
+## `socialAccountSecrets`
+
+
+encryptedAccessToken VARBINARY(MAX)
+encryptedRefreshToken VARBINARY(MAX)
+tokenScope VARCHAR(255)
+tokenExpiresAt DATETIME2
+encryptionKeyVersion VARCHAR(30)
+isRevoked BIT
+revokedAt DATETIME2
+
+## `authSessionSecrets`
+
+
+encryptedRefreshToken VARBINARY(MAX)
+encryptionKeyVersion VARCHAR(30)
+
+### Beneficio
+
+Permite:
+
+* cifrado por certificados,
+* separación de secretos,
+* control granular de permisos,
+* menor superficie de ataque,
+* revocación segura de tokens.
+
+---
+
+# 3. Implementación de RBAC (Role-Based Access Control)
+
+### Problema detectado
+
+No existía separación formal de roles y permisos.
+
+### Cambios aplicados
+
+Se agregaron las tablas:
+
+## `roles`
+
+## `permissions`
+
+## `rolePermissions`
+
+## `personRoles`
+
+### Beneficio
+
+Permite:
+
+* separación administrador/moderador/jugador/auditor,
+* permisos heredados,
+* principio de mínimo privilegio,
+* laboratorios de permisos SQL Server.
+
+---
+
+# 4. Fortalecimiento de sesiones y autenticación
+
+### Problema detectado
+
+Las sesiones no tenían suficiente trazabilidad ni metadata de seguridad.
+
+### Cambios aplicados
+
+Nuevos campos en `authSessions`:
+
+
+deviceFingerprint VARCHAR(255)
+mfaValidated BIT
+sessionType VARCHAR(40)
+revokedAt DATETIME2
+
+### Beneficio
+
+Permite:
+
+* detección de robo de sesión,
+* control MFA,
+* análisis de dispositivos,
+* invalidación segura.
+
+---
+
+# 5. Sistema de eventos de seguridad
+
+### Problema detectado
+
+No existía trazabilidad centralizada de eventos de seguridad.
+
+### Cambios aplicados
+
+Nueva tabla:
+
+## `securityEvents`
+
+Eventos soportados:
+
+* login sospechoso,
+* MFA deshabilitado,
+* cambio de contraseña,
+* revocación de sesión,
+* anomalías de autenticación.
+
+### Beneficio
+
+Facilita:
+
+* auditoría,
+* monitoreo,
+* detección de fraude,
+* forensic analysis.
+
+---
+
+# 6. Protección contra ataques de fuerza bruta
+
+### Problema detectado
+
+No existía control estructurado de intentos de login.
+
+### Cambios aplicados
+
+Nueva tabla:
+
+## `loginAttempts`
+
+Campos:
+
+* IP,
+* userAgent,
+* resultado,
+* motivo de fallo,
+* timestamp.
+
+### Beneficio
+
+Permite:
+
+* rate limiting,
+* bloqueo automático,
+* detección de credential stuffing,
+* análisis de ataques.
+
+---
+
+# 7. Preparación para MFA
+
+### Problema detectado
+
+El diseño no soportaba autenticación multifactor.
+
+### Cambios aplicados
+
+Nueva tabla:
+
+## `mfaMethods`
+
+Incluye:
+
+* secretos cifrados,
+* recovery codes,
+* método principal,
+* verificación.
+
+### Beneficio
+
+Permite:
+
+* TOTP,
+* recovery codes,
+* ampliación futura a WebAuthn.
+
+---
+
+# 8. Endurecimiento de auditoría
+
+### Problema detectado
+
+La auditoría no almacenaba suficiente información para análisis forense.
+
+### Cambios aplicados
+
+Nuevos campos en `auditLogs`:
+
+
+authSessionId
+ipAddress
+userAgent
+requestSource
+operationResult
+
+
+Nuevos campos en `auditLogDetails`:
+
+
+oldJson
+newJson
+
+
+### Beneficio
+
+Permite:
+
+* reconstrucción completa de eventos,
+* auditoría financiera,
+* trazabilidad avanzada,
+* investigación de incidentes.
+
+---
+
+# 9. Protección de balances financieros
+
+### Problema detectado
+
+No existía mecanismo de integridad fuerte sobre balances y movimientos.
+
+### Cambios aplicados
+
+Nuevos campos hash:
+
+
+previousHash VARBINARY(512)
+currentHash VARBINARY(512)
+
+
+Aplicados en:
+
+* `walletCurrentBalances`
+* `walletTransactions`
+* `financialMovements`
+
+### Beneficio
+
+Permite:
+
+* detectar alteraciones,
+* mejorar integridad,
+* preparar ledger inmutable,
+* aumentar trazabilidad financiera.
+
+---
+
+# 10. Separación de secretos financieros
+
+### Problema detectado
+
+`paymentMethods.config` podía almacenar secretos junto a configuración pública.
+
+### Cambios aplicados
+
+Se reemplazó:
+
+
+config NVARCHAR(MAX)
+
+
+por:
+
+
+publicConfig NVARCHAR(MAX)
+
+
+y se creó:
+
+## `paymentMethodSecrets`
+
+### Beneficio
+
+Permite:
+
+* aislar credenciales,
+* cifrado dedicado,
+* permisos diferenciados.
+
+---
+
+# 11. Protección de evidencia sensible
+
+### Problema detectado
+
+Las evidencias sociales podían exponer contenido privado.
+
+### Cambios aplicados
+
+Nuevos campos en `propositionEvidence`:
+
+
+storageProvider
+signedUrlExpiresAt
+isSensitive
+
+### Beneficio
+
+Permite:
+
+* URLs temporales,
+* clasificación sensible,
+* control de acceso.
+
+---
+
+# 12. Clasificación de direcciones sensibles
+
+### Problema detectado
+
+Las direcciones no podían clasificarse como sensibles.
+
+### Cambios aplicados
+
+Nuevo campo:
+
+
+isSensitive BIT
+
+en `addresses`.
+
+### Beneficio
+
+Facilita:
+
+* masking,
+* RLS,
+* controles de privacidad.
+
+---
+
+# 13. Preparación para SQL Server Security Features
+
+El nuevo diseño quedó preparado para implementar:
+
+## Dynamic Data Masking
+
+Sobre:
+
+* email,
+* phone,
+* identification,
+* exactAddress.
+
+## Row-Level Security
+
+Sobre:
+
+* wallets,
+* payments,
+* withdrawalRequests,
+* predictions,
+* authSessions.
+
+## Cifrado administrado
+
+Mediante:
+
+* Master Key,
+* Certificates,
+* EncryptByCert(),
+* DecryptByCert().
+
+## Stored Procedures seguros
+
+Aplicando:
+
+* EXECUTE AS OWNER,
+* DENY SELECT,
+* acceso indirecto.
+
+---
+
+# Resultado general
+
+La revisión fortaleció significativamente:
+
+* autenticación,
+* autorización,
+* trazabilidad,
+* manejo de secretos,
+* seguridad financiera,
+* protección de PII,
+* preparación para auditorías,
+* compatibilidad con SQL Server Security Labs.
+
+El diseño final quedó preparado para:
+
+* RBAC,
+* MFA,
+* Row-Level Security,
+* Dynamic Data Masking,
+* cifrado administrado,
+* auditoría avanzada,
+* control granular de acceso,
+* prevención de fraude y abuso interno.

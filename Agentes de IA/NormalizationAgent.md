@@ -757,3 +757,337 @@ Diseño de tablas a revisar:
 * createdAt TIMESTAMP
 * updatedAt TIMESTAMP
 * isDeleted BOOLEAN
+
+
+---
+
+
+# Respuesta de la IA
+# Resumen de cambios de normalización aplicados
+
+## Objetivo de la revisión
+
+Se realizó una revisión del modelo relacional de Gathel enfocada exclusivamente en principios de normalización (1FN, 2FN y 3FN), buscando reducir redundancia, eliminar duplicidad conceptual, mejorar integridad lógica y separar correctamente responsabilidades entre entidades.
+
+---
+
+# Cambios aplicados al diseño
+
+## 1. Eliminación de duplicidad entre proposiciones y respuestas
+
+### Problema detectado
+
+Las tablas `propositions` y `propositionReplies` tenían prácticamente la misma estructura, lo que generaba:
+
+* Duplicación de columnas.
+* Redundancia lógica.
+* Riesgo de inconsistencias.
+* Complejidad innecesaria.
+
+### Cambio aplicado
+
+Se eliminó la tabla:
+
+* `propositionReplies`
+
+Y se agregó en `propositions`:
+
+```text
+parentPropositionId INT FK propositions
+```
+
+### Resultado
+
+Ahora las respuestas se modelan como relaciones jerárquicas dentro de la misma entidad.
+
+Esto mejora:
+
+* 3FN.
+* consistencia del dominio.
+* mantenibilidad.
+
+---
+
+## 2. Eliminación de `statusTypes`
+
+### Problema detectado
+
+Existían catálogos específicos:
+
+* `propositionStatuses`
+* `predictionStatuses`
+* `withdrawalRequestStatuses`
+
+Pero además existía:
+
+* `statusTypes`
+
+Lo que generaba redundancia conceptual y ambigüedad.
+
+### Cambio aplicado
+
+Se eliminó:
+
+* `statusTypes`
+
+Y se rediseñó `statusHistory` usando referencias explícitas a estados específicos.
+
+### Resultado
+
+Cada dominio ahora utiliza únicamente sus propios estados especializados.
+
+Esto mejora:
+
+* claridad semántica,
+* integridad lógica,
+* normalización 3FN.
+
+---
+
+## 3. Rediseño de `statusHistory`
+
+### Problema detectado
+
+El modelo original dependía de relaciones polimórficas genéricas mediante:
+
+```text
+referenceTypeId
+referenceId
+```
+
+Lo que dificultaba:
+
+* integridad referencial,
+* validaciones,
+* consistencia.
+
+### Cambio aplicado
+
+Se reemplazó por referencias explícitas:
+
+```text
+propositionId
+predictionId
+withdrawalRequestId
+```
+
+Y estados específicos:
+
+```text
+propositionStatusId
+predictionStatusId
+withdrawalRequestStatusId
+```
+
+### Resultado
+
+Se mejoró:
+
+* trazabilidad,
+* integridad relacional,
+* claridad del historial de estados.
+
+---
+
+## 4. Normalización de auditoría
+
+### Problema detectado
+
+`auditLogs` almacenaba:
+
+```text
+oldValue
+newValue
+```
+
+Lo que limitaba auditorías multicolumna y mezclaba responsabilidades.
+
+### Cambio aplicado
+
+Se separó en:
+
+* `auditLogs`
+* `auditLogDetails`
+
+### Resultado
+
+Ahora:
+
+* cada log representa un evento,
+* y cada detalle representa un cambio específico de columna.
+
+Esto mejora:
+
+* trazabilidad,
+* escalabilidad del sistema de auditoría,
+* cumplimiento de 3FN.
+
+---
+
+## 5. Incorporación de catálogos faltantes
+
+### Problema detectado
+
+Existían áreas funcionales sin catálogos especializados.
+
+### Cambio aplicado
+
+Se agregaron:
+
+* `notificationTypes`
+* `evidenceTypes`
+* `propositionResultTypes`
+* `aiModerationStatuses`
+
+### Resultado
+
+Se eliminó dependencia de valores implícitos o hardcoded y se mejoró:
+
+* consistencia,
+* extensibilidad,
+* normalización semántica.
+
+---
+
+## 6. Clasificación de evidencias
+
+### Cambio aplicado
+
+En `propositionEvidenceImages` se agregó:
+
+```text
+evidenceTypeId INT FK evidenceTypes
+```
+
+### Resultado
+
+El sistema ahora puede diferenciar:
+
+* imágenes,
+* videos,
+* stories,
+* livestreams,
+* publicaciones externas,
+* otros tipos futuros.
+
+---
+
+## 7. Clasificación de notificaciones
+
+### Cambio aplicado
+
+En `notifications` se agregó:
+
+```text
+notificationTypeId INT FK notificationTypes
+```
+
+### Resultado
+
+Las notificaciones ahora pueden categorizarse formalmente.
+
+---
+
+## 8. Formalización de resultados de proposiciones
+
+### Problema detectado
+
+`winningOption` era ambiguo semánticamente.
+
+### Cambio aplicado
+
+Se agregaron:
+
+```text
+propositionResultTypeId
+resolvedByAI
+resolvedAt
+aiModerationStatusId
+```
+
+### Resultado
+
+Ahora el sistema puede distinguir claramente:
+
+* moderación AI,
+* resolución oficial,
+* validación automática,
+* resultados finales.
+
+---
+
+## 9. Reglas UNIQUE agregadas
+
+### Cambio aplicado
+
+Se incorporaron restricciones UNIQUE en:
+
+* email
+* username
+* identification
+* wallets por usuario
+* votos duplicados
+* likes duplicados
+* predicciones duplicadas
+* usernames sociales duplicados por plataforma
+* ciudades duplicadas por país
+* ISO codes de países
+
+### Resultado
+
+Se fortaleció:
+
+* integridad lógica,
+* consistencia de negocio,
+* control de duplicados.
+
+---
+
+## 10. Reglas CHECK agregadas
+
+### Cambio aplicado
+
+Se agregaron validaciones para:
+
+* porcentajes entre 0 y 100,
+* montos positivos,
+* exchange rates positivos,
+* puntos válidos.
+
+### Resultado
+
+Se reducen inconsistencias y datos inválidos desde el nivel relacional.
+
+---
+
+# Cambios evaluados pero mantenidos intencionalmente
+
+Las siguientes estructuras fueron revisadas pero se mantuvieron por razones de auditoría, trazabilidad o snapshots históricos:
+
+* `walletBalances`
+* `financialBalancesHistory`
+* `amountUsd`
+* `predictions.isWinner`
+* `referenceTypeId/referenceId`
+* `payments`
+* `paymentAttempts`
+
+Se determinó que su redundancia puede ser válida en sistemas:
+
+* financieros,
+* auditables,
+* históricos,
+* o de alta concurrencia.
+
+---
+
+# Resultado final de la revisión
+
+El modelo final:
+
+* mejora cumplimiento de 3FN,
+* reduce duplicidad estructural,
+* mejora integridad relacional,
+* fortalece consistencia semántica,
+* separa responsabilidades correctamente,
+* y mantiene compatibilidad con necesidades financieras y de auditoría del sistema Gathel.

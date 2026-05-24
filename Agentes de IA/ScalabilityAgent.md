@@ -755,3 +755,452 @@ Diseño de tablas a revisar:
 * createdAt TIMESTAMP
 * updatedAt TIMESTAMP
 * isDeleted BOOLEAN
+
+
+---
+
+
+# Respuesta de la IA
+# Resumen de cambios sugeridos y aplicados por el Scalability Agent
+
+## Objetivo de la revisión
+
+La revisión se enfocó exclusivamente en mejorar la escalabilidad del diseño de base de datos de Gathel para SQL Server 2022, considerando:
+
+* Alto volumen de inserciones.
+* Alta concurrencia.
+* Crecimiento masivo de eventos.
+* Auditoría extensa.
+* Operaciones financieras concurrentes.
+* Validaciones AI.
+* Trazabilidad.
+* Procesamiento batch.
+* Expansión futura del sistema.
+
+---
+
+# Cambios estructurales aplicados
+
+## 1. Creación de tabla `propositionEvents`
+
+### Problema detectado
+
+El modelo original no tenía una tabla explícita para almacenar eventos asociados a proposiciones, pese a que el proyecto exige mínimo 250000 eventos.
+
+### Cambio aplicado
+
+Se agregó:
+
+* `propositionEvents`
+* `propositionEventTypes`
+
+### Beneficio de escalabilidad
+
+Permite:
+
+* arquitectura event-driven,
+* historial append-only,
+* generación masiva de eventos,
+* procesamiento concurrente,
+* trazabilidad temporal,
+* desacoplamiento operativo.
+
+---
+
+## 2. Separación de balances actuales e históricos
+
+### Problema detectado
+
+`walletBalances` mezclaba balance operativo e historial financiero.
+
+### Cambio aplicado
+
+Se reemplazó por:
+
+* `walletCurrentBalances`
+* `walletBalanceHistory`
+
+### Beneficio de escalabilidad
+
+Reduce:
+
+* contención,
+* locks,
+* deadlocks,
+* hotspots financieros.
+
+Permite:
+
+* consultas rápidas de balance actual,
+* historial append-only,
+* mejor concurrencia.
+
+---
+
+## 3. Separación del historial de estados
+
+### Problema detectado
+
+`statusHistory` mezclaba múltiples dominios:
+
+* proposiciones,
+* predicciones,
+* retiros.
+
+### Cambio aplicado
+
+Se dividió en:
+
+* `propositionStatusHistory`
+* `predictionStatusHistory`
+* `withdrawalRequestStatusHistory`
+
+### Beneficio de escalabilidad
+
+Mejora:
+
+* particionamiento,
+* índices,
+* consultas históricas,
+* mantenimiento,
+* aislamiento de workloads.
+
+---
+
+## 4. Generalización del sistema de evidencias
+
+### Problema detectado
+
+`propositionEvidenceImages` solo soportaba imágenes.
+
+### Cambio aplicado
+
+Se reemplazó por:
+
+* `propositionEvidence`
+
+Con soporte para:
+
+* imágenes,
+* videos,
+* streams,
+* stories,
+* multimedia.
+
+### Beneficio de escalabilidad
+
+Permite crecimiento futuro del sistema AI y validaciones multimedia.
+
+---
+
+## 5. Incorporación de AI validation tracking
+
+### Problema detectado
+
+No existía una estructura clara para almacenar resultados de AI.
+
+### Cambio aplicado
+
+Se agregaron:
+
+* `aiValidationResults`
+* `aiValidationStatuses`
+
+### Beneficio de escalabilidad
+
+Permite:
+
+* procesamiento asincrónico,
+* reintentos,
+* monitoreo AI,
+* trazabilidad,
+* métricas de validación.
+
+---
+
+## 6. Incorporación de observabilidad técnica
+
+### Problema detectado
+
+No existía monitoreo estructurado de procesos internos.
+
+### Cambio aplicado
+
+Se agregó:
+
+* `systemProcessingLogs`
+
+### Beneficio de escalabilidad
+
+Permite monitorear:
+
+* SPs críticos,
+* procesos batch,
+* fallos,
+* tiempos de ejecución,
+* errores distribuidos.
+
+---
+
+# Cambios de concurrencia y procesamiento masivo
+
+## 7. Incorporación de `processingStatusId`
+
+### Cambio aplicado
+
+Se agregó en tablas críticas:
+
+* propositions
+* predictions
+* walletTransactions
+* payments
+* paymentAttempts
+* withdrawalRequests
+* withdrawalAttempts
+* financialMovements
+* propositionEvents
+* systemProcessingLogs
+
+### Beneficio
+
+Facilita:
+
+* procesamiento async,
+* recuperación de fallos,
+* colas internas,
+* control de estados.
+
+---
+
+## 8. Incorporación de `correlationId`
+
+### Cambio aplicado
+
+Se agregó en múltiples tablas críticas.
+
+### Beneficio
+
+Permite:
+
+* trazabilidad distribuida,
+* debugging,
+* seguimiento end-to-end,
+* observabilidad.
+
+---
+
+## 9. Incorporación de `batchId`
+
+### Cambio aplicado
+
+Se agregó en operaciones masivas:
+
+* predictions
+* walletTransactions
+* payments
+* withdrawalRequests
+* financialMovements
+* commissions
+* walletBalanceHistory
+
+### Beneficio
+
+Facilita:
+
+* procesamiento batch,
+* cierre masivo,
+* conciliación financiera,
+* reversiones.
+
+---
+
+## 10. Incorporación de `idempotencyKey`
+
+### Cambio aplicado
+
+Se agregó en:
+
+* walletTransactions
+* payments
+* paymentAttempts
+* withdrawalRequests
+* financialMovements
+
+### Beneficio
+
+Evita:
+
+* duplicados,
+* doble procesamiento,
+* dobles pagos,
+* inconsistencias por retries.
+
+---
+
+## 11. Incorporación de `processingNode`
+
+### Cambio aplicado
+
+Se agregó en:
+
+* propositionEvents
+* walletTransactions
+* payments
+* withdrawalRequests
+* financialMovements
+* auditLogs
+* systemProcessingLogs
+
+### Beneficio
+
+Permite trazabilidad distribuida y diagnóstico de nodos.
+
+---
+
+## 12. Incorporación de columnas de retry y fallos
+
+### Cambio aplicado
+
+Se agregaron:
+
+* `retryCount`
+* `processedAt`
+* `failedAt`
+
+### Beneficio
+
+Permite:
+
+* recuperación automática,
+* reintentos controlados,
+* monitoreo operacional.
+
+---
+
+# Cambios de escalabilidad financiera
+
+## 13. Mejoras en pagos y retiros
+
+### Cambio aplicado
+
+Se agregaron:
+
+* `externalTransactionId`
+* `idempotencyKey`
+* tracking de procesamiento
+
+### Beneficio
+
+Reduce riesgos de:
+
+* duplicados,
+* inconsistencias,
+* reintentos externos,
+* fallos de integración.
+
+---
+
+## 14. Mejoras en movimientos financieros
+
+### Cambio aplicado
+
+`financialMovements` ahora soporta:
+
+* procesamiento distribuido,
+* batch processing,
+* observabilidad,
+* trazabilidad.
+
+### Beneficio
+
+Escala mejor para:
+
+* grandes volúmenes financieros,
+* recompensas masivas,
+* conciliaciones.
+
+---
+
+# Cambios para crecimiento futuro
+
+## 15. Incorporación de tablas de estados técnicos
+
+### Cambio aplicado
+
+Se agregaron:
+
+* `processingStatuses`
+* `aiValidationStatuses`
+* `propositionEventTypes`
+
+### Beneficio
+
+Facilita expansión futura del sistema.
+
+---
+
+## 16. Expiración de notificaciones
+
+### Cambio aplicado
+
+Se agregó:
+
+* `expiresAt`
+
+### Beneficio
+
+Permite:
+
+* archivado,
+* limpieza automática,
+* reducción del tamaño OLTP.
+
+---
+
+## 17. Incorporación de `ROWVERSION`
+
+### Cambio aplicado
+
+Se agregó en:
+
+* `walletCurrentBalances`
+
+### Beneficio
+
+Mejora control de concurrencia optimista en SQL Server.
+
+---
+
+# Estrategias de escalabilidad consideradas
+
+## Se priorizó un diseño orientado a:
+
+* Alto volumen de inserts.
+* Datos append-only.
+* Bajo volumen de updates.
+* Escalabilidad horizontal lógica.
+* Procesamiento batch.
+* Event sourcing parcial.
+* Auditoría desacoplada.
+* Observabilidad distribuida.
+* Soporte para particionamiento temporal.
+* Compatibilidad con SQL Server 2022.
+
+---
+
+# Riesgos mitigados con los cambios
+
+Los cambios ayudan a reducir:
+
+* deadlocks financieros,
+* hotspots en wallets,
+* crecimiento descontrolado de auditoría,
+* contención en balances,
+* doble procesamiento,
+* pérdida de trazabilidad,
+* problemas de retries,
+* inconsistencias concurrentes,
+* dificultad de monitoreo,
+* saturación de tablas históricas,
+* limitaciones para AI processing,
+* problemas de escalabilidad futura.
