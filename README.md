@@ -38,7 +38,53 @@ Por definir... En general funcionalidades básicas del sitio web y lo más compl
 
 Por definir... Como están acomodadas las carpetas dentro del repositorio. Ejemplo: 
 
-gathel/ │ ├── README.md ├── docker-compose.yml │ ├── docs/ │ ├── database-spec.md │ ├── flyway-guide.md │ ├── seeding.md │ ├── security-lab.md │ ├── transactions-concurrency.md │ ├── live-coding-guide.md │ ├── docker-guide.md │ │ │ ├── agents/ │ │ └── README.md │ │ │ └── agent-results/ │ └── README.md │ ├── dbml/ │ └── gathel.dbml │ ├── diagrams/ │ └── gathel-database.pdf │ ├── flyway/ │ ├── conf/ │ │ └── flyway.conf │ │ │ └── sql/ │ ├── V1__create_schemas.sql │ ├── V2__create_tables.sql │ ├── V3__constraints_indexes.sql │ ├── V4__stored_procedures.sql │ ├── V5__views_functions.sql │ ├── V6__security_lab.sql │ ├── V7__transactions_concurrency.sql │ └── V8__seed_data.sql │ ├── backend/ │ └── README.md │ └── frontend/ └── README.md
+```txt
+gathel/
+│
+├── README.md
+├── docker-compose.yml
+│
+├── docs/
+│   ├── database-spec.md
+│   ├── flyway-guide.md
+│   ├── seeding.md
+│   ├── security-lab.md
+│   ├── transactions-concurrency.md
+│   ├── live-coding-guide.md
+│   ├── docker-guide.md
+│   │
+│   ├── agents/
+│   │   └── README.md
+│   │
+│   └── agent-results/
+│       └── README.md
+│
+├── dbml/
+│   └── gathel.dbml
+│
+├── diagrams/
+│   └── gathel-database.pdf
+│
+├── flyway/
+│   ├── conf/
+│   │   └── flyway.conf
+│   │
+│   └── sql/
+│       ├── V1__create_schemas.sql
+│       ├── V2__create_tables.sql
+│       ├── V3__constraints_indexes.sql
+│       ├── V4__stored_procedures.sql
+│       ├── V5__views_functions.sql
+│       ├── V6__security_lab.sql
+│       ├── V7__transactions_concurrency.sql
+│       └── V8__seed_data.sql
+│
+├── backend/
+│   └── README.md
+│
+└── frontend/
+    └── README.md
+```
 
 ## Agentes Implementados 
 
@@ -58,8 +104,23 @@ Los agentes utilizados para la revisión de la base de datos fueron... Se ponen 
 
 ## Migraciones Flyway
 
-Todas las modificaciones a la base de datos se administrarán mediante Flyway.
+Todas las modificaciones a la base de datos se administrarán mediante Flyway. Poner estructura, ejemplo: 
 
+```txt
+flyway/
+  ├── conf/
+  │   └── flyway.conf
+  │
+  └── sql/
+      ├── V1__create_schemas.sql
+      ├── V2__create_tables.sql
+      ├── V3__constraints_indexes.sql
+      ├── V4__stored_procedures.sql
+      ├── V5__views_functions.sql
+      ├── V6__security_lab.sql
+      ├── V7__transactions_concurrency.sql
+      └── V8__seed_data.sql
+```
 ## Seeding 
 
 El script de seeding deberá generar como mínimo:
