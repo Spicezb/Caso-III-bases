@@ -104,23 +104,13 @@ Los agentes utilizados para la revisión de la base de datos fueron... Se ponen 
 
 ## Migraciones Flyway
 
-Todas las modificaciones a la base de datos se administrarán mediante Flyway. Poner estructura, ejemplo: 
+Todas las modificaciones oficiales de la base de datos se administrarán mediante Flyway.
+Para este proyecto, Flyway se ejecuta mediante Docker Compose, por lo que no es necesario instalar Flyway manualmente en cada computadora.
 
-```txt
-flyway/
-  ├── conf/
-  │   └── flyway.conf
-  │
-  └── sql/
-      ├── V1__create_schemas.sql
-      ├── V2__create_tables.sql
-      ├── V3__constraints_indexes.sql
-      ├── V4__stored_procedures.sql
-      ├── V5__views_functions.sql
-      ├── V6__security_lab.sql
-      ├── V7__transactions_concurrency.sql
-      └── V8__seed_data.sql
-```
+Flyway se encarga de ejecutar los scripts SQL versionados y registrar cuáles migraciones ya fueron aplicadas dentro de la tabla interna flyway_schema_history.
+
+Accede a la guía aquí para entender mejor lo que se hizo: [Guía de Flyway](docs/flywayResearch.md)
+
 ## Seeding 
 
 El script de seeding deberá generar como mínimo:
@@ -141,14 +131,79 @@ También deberá garantizar:
 
 ## Ejecución del proyecto
 
-Todo el proceso de montar y ejecutar el proyecto...
+El proyecto utiliza Docker Compose para levantar los servicios necesarios.
+Actualmente se configuró SQL Server y Flyway mediante contenedores.
+
+### Requisitos previos
+
+* Git.
+* Docker Desktop.
+* SQL Server Management Studio.
+* Visual Studio Code o editor equivalente.
+* Node.js LTS, cuando se implemente el frontend o backend.
+
+No es necesario instalar Flyway manualmente, ya que se ejecuta mediante Docker Compose.
+
+### Levantar SQL Server
+
+Desde la raíz del proyecto:
+
+```bash
+docker compose up -d sqlserver
+```
+
+### Ejecutar migraciones con Flyway
+
+Cuando existan scripts SQL con contenido real dentro de `flyway/sql`, se ejecuta:
+
+```bash
+docker compose run --rm flyway
+```
+
+### Verificar migraciones aplicadas
+
+En SQL Server Management Studio conectarse con:
+
+```txt
+Servidor: localhost,1433
+Usuario: sa
+Contraseña: Gathel123!
+```
+
+Luego ejecutar:
+
+```sql
+USE GathelDB;
+GO
+
+SELECT *
+FROM flyway_schema_history;
+GO
+```
+
+## Estado actual del proyecto
+
+| Fase                                     | Estado      |
+| ---------------------------------------- | ----------- |
+| Repositorio inicial                      | En progreso |
+| README inicial                           | En progreso |
+| Docker Compose con SQL Server            | Configurado |
+| Flyway mediante Docker Compose           | Configurado |
+| Configuración `flyway.conf`              | En progreso |
+| Scripts SQL definitivos                  | Pendiente   |
+| Seeding inicial                          | Pendiente   |
+| Especificación Markdown de base de datos | Pendiente   |
+| DBML                                     | Pendiente   |
+| Diagrama PDF                             | Pendiente   |
+| Backend MVP                              | Pendiente   |
+| Frontend MVP                             | Pendiente   |
+
 
 ### Requisitos previos
 
 - Git
 - Docker Desktop
 - SQL Server Management Studio
-- Flyway
 - Por definir... La parte del frontend 
 
 ### Levantar servicios
