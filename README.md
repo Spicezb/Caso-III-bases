@@ -109,7 +109,7 @@ Para este proyecto, Flyway se ejecuta mediante Docker Compose, por lo que no es 
 
 Flyway se encarga de ejecutar los scripts SQL versionados y registrar cuáles migraciones ya fueron aplicadas dentro de la tabla interna flyway_schema_history.
 
-Accede a la guía aquí para entender mejor lo que se hizo: [Guía de Flyway](Gathel\docs"/flywayResearch.md)
+Accede a la guía aquí para entender mejor lo que se hizo: [Investigación de Flyway](Gathel/docs/flywayResearch.md)
 
 ## Seeding 
 
