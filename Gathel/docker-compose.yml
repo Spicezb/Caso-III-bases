@@ -1,0 +1,32 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: gathel_sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Gathel123!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - gathel_sqlserver_data:/var/opt/mssql
+    networks:
+      - gathel_network
+
+  flyway:
+    image: flyway/flyway:latest
+    container_name: gathel_flyway
+    depends_on:
+      - sqlserver
+    volumes:
+      - ./flyway/sql:/flyway/sql
+      - ./flyway/conf:/flyway/conf
+    command: -configFiles=/flyway/conf/flyway.conf migrate
+    networks:
+      - gathel_network
+
+volumes:
+  gathel_sqlserver_data:
+
+networks:
+  gathel_network:
