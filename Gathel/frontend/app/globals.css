@@ -1,0 +1,108 @@
+@import "@heroui/react/styles";
+
+@theme inline {
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+/*
+  Paleta Gathel
+  - Fondo: casi negro azulado, sensacion de "feed nocturno"
+  - Acento: ambar de pronostico (probabilidades, CTAs principales)
+  - Exito: verde senal (proposicion cumplida)
+  - Peligro: rojo apagado (proposicion no cumplida)
+*/
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: oklch(0.16 0.012 260);
+  --foreground: oklch(0.96 0.005 90);
+
+  --surface: oklch(0.21 0.014 260);
+  --surface-foreground: var(--foreground);
+
+  --surface-secondary: oklch(0.245 0.015 260);
+  --surface-tertiary: oklch(0.28 0.016 260);
+
+  --overlay: oklch(0.23 0.014 260);
+  --overlay-foreground: var(--foreground);
+
+  --muted: oklch(0.62 0.02 250);
+
+  --default: oklch(0.27 0.015 260);
+  --default-foreground: var(--foreground);
+
+  --accent: oklch(0.78 0.15 65);
+  --accent-foreground: oklch(0.18 0.03 65);
+
+  --field-background: oklch(0.23 0.014 260);
+  --field-foreground: var(--foreground);
+  --field-placeholder: var(--muted);
+  --field-border: oklch(0.32 0.016 260);
+
+  --success: oklch(0.75 0.16 158);
+  --success-foreground: oklch(0.16 0.03 158);
+
+  --warning: var(--accent);
+  --warning-foreground: var(--accent-foreground);
+
+  --danger: oklch(0.64 0.18 25);
+  --danger-foreground: oklch(0.97 0.01 25);
+
+  --border: oklch(0.3 0.015 260);
+  --separator: oklch(0.27 0.015 260);
+  --focus: var(--accent);
+  --link: var(--accent);
+
+  --backdrop: rgba(5, 6, 10, 0.7);
+
+  --surface-shadow: 0 0 0 0 transparent;
+  --overlay-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.45);
+  --field-shadow: 0 0 0 0 transparent;
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.bg-noise {
+  background-image: radial-gradient(
+      circle at 20% 20%,
+      color-mix(in oklch, var(--accent) 10%, transparent) 0%,
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 85% 10%,
+      color-mix(in oklch, var(--success) 8%, transparent) 0%,
+      transparent 40%
+    );
+}
+
+.feed-divider {
+  border-top: 1px dashed var(--border);
+}
+
+@keyframes ticker-scroll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.ticker-track {
+  animation: ticker-scroll 28s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+}
