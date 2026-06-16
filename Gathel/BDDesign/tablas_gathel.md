@@ -545,8 +545,9 @@ UNIQUE(propositionId, personId)
 * predictionPayoutId SERIAL PK 
 * predictionId FK predictions
 * walletTransactionId FK walletTransactions
-* payoutAmount NUMERIC(5,2)
-* commissionAmount NUMERIC(5,2)
+* moneyPayoutAmount NUMERIC(8,2)
+* pointsPayoutAmount NUMERIC(8,2)
+* commissionAmount NUMERIC(8,2)
 * executedAt TIMESTAMP (DEFAULT GETDATE())
 * createdAt timestamp (DEFAULT GETDATE())
 * updatedAt timestamp (DEFAULT GETDATE())
