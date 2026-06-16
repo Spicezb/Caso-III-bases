@@ -1,5 +1,5 @@
 /*=========================================================
-  PEOPLE TYPES
+  PEOPLE TYPES 
 =========================================================*/
 
 INSERT INTO peopleTypes(name, description)
@@ -459,6 +459,9 @@ SELECT
     updatedAt
 FROM people;
 
+/*=========================================================
+  REFERENCE TYPES
+=========================================================*/
 
 INSERT INTO referenceTypes
 (
@@ -477,6 +480,10 @@ VALUES
 ('Payout');
 
 
+/*=========================================================
+  TRANSACTION TYPES
+=========================================================*/
+
 INSERT INTO transactionTypes
 (
     name,
@@ -491,6 +498,10 @@ VALUES
 ('Penalty','Penalty deduction'),
 ('Refund','Refund of a previous transaction');
 
+/*=========================================================
+  REPORT TYPES
+=========================================================*/
+
 INSERT INTO reportTypes
 (
     name,
@@ -503,6 +514,10 @@ VALUES
 ('Harassment','Harassment against another user'),
 ('Fraud','Fraudulent activity'),
 ('Other','Other policy violation');
+
+/*=========================================================
+  PENALTY TYPES
+=========================================================*/
 
 INSERT INTO penaltyTypes
 (
@@ -537,6 +552,10 @@ VALUES
     100.00
 );
 
+/*=========================================================
+  COMISSION TYPES
+=========================================================*/
+
 INSERT INTO commissionTypes
 (
     name,
@@ -569,6 +588,10 @@ VALUES
     2.50,
     1
 );
+
+/*=========================================================
+  NOTIFICATION TYPES
+=========================================================*/
 
 INSERT INTO notificationTypes
 (
@@ -609,7 +632,9 @@ VALUES
     'Account verification completed'
 );
 
-
+/*=========================================================
+  FILE TYPES
+=========================================================*/
 
 INSERT INTO fileTypes
 (
@@ -639,7 +664,9 @@ VALUES
     'Portable Document Format'
 );
 
-
+/*=========================================================
+  FILE USAGE TYPES
+=========================================================*/
 
 INSERT INTO fileUsageTypes
 (
@@ -668,7 +695,9 @@ VALUES
     'Evidence attached to reports'
 );
 
-
+/*=========================================================
+  SOCIAL FILES
+=========================================================*/
 
 DECLARE @pngTypeId INT =
 (
@@ -692,7 +721,9 @@ VALUES
 (@pngTypeId,'youtube.png','/logos/youtube.png',26000,1001),
 (@pngTypeId,'facebook.png','/logos/facebook.png',27000,1001);
 
-
+/*=========================================================
+  PAYMENT FILES
+=========================================================*/
 
 INSERT INTO files
 (
@@ -708,7 +739,9 @@ VALUES
 (@pngTypeId,'banktransfer.png','/logos/banktransfer.png',21000,1001),
 (@pngTypeId,'sinpe.png','/logos/sinpe.png',19000,1001);
 
-
+/*=========================================================
+  SOCIAL PLATFOMRS
+=========================================================*/
 
 INSERT INTO socialPlatforms
 (
@@ -769,7 +802,9 @@ VALUES
     '{"supportsPages":true,"supportsVerification":true}'
 );
 
-
+/*=========================================================
+  PAYMENT METHODS
+=========================================================*/
 
 INSERT INTO paymentMethods
 (
@@ -1165,6 +1200,32 @@ BEGIN
     END;
 
     SET @authSessionId += 1;
+
+END;
+
+DECLARE @seCounter INT = 1;
+
+WHILE @seCounter <= 5000
+BEGIN
+
+    INSERT INTO securityEvents
+    (
+        securityEventTypeId,
+        personId,
+        authSessionId,
+        eventDateTime,
+        details
+    )
+    VALUES
+    (
+        ABS(CHECKSUM(NEWID())) % 6 + 1,
+        ABS(CHECKSUM(NEWID())) % 1000 + 1,
+        ABS(CHECKSUM(NEWID())) % 5000 + 1,
+        DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 365), GETDATE()),
+        'Automated security event'
+    );
+
+    SET @seCounter += 1;
 
 END;
 
@@ -1574,6 +1635,32 @@ SELECT
     creatorPersonId
 FROM propositions;
 
+DECLARE @shCounter INT = 1;
+
+WHILE @shCounter <= 5000
+BEGIN
+
+    INSERT INTO statusHistory
+    (
+        referenceTypeId,
+        referenceId,
+        statusTypeId,
+        changedAt,
+        auditPersonId
+    )
+    VALUES
+    (
+        ABS(CHECKSUM(NEWID())) % 10 + 1,
+        ABS(CHECKSUM(NEWID())) % 5000 + 1,
+        ABS(CHECKSUM(NEWID())) % 7 + 1,
+        DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 365), GETDATE()),
+        1001
+    );
+
+    SET @shCounter += 1;
+
+END;
+
 
 /*=========================================================
   PREDICTIONS
@@ -1765,8 +1852,7 @@ INNER JOIN propositions pr
     ON pr.propositionId = p.propositionId;
 
 
-
-    /*=========================================================
+/*=========================================================
   TRANSACTION ATTEMPTS
 =========================================================*/
 
@@ -1942,6 +2028,29 @@ SELECT
 FROM transactions t;
 
 
+INSERT INTO financialMovements
+(
+    transactionTypeId,
+    amount,
+    currencyId,
+    exchangeRateId,
+    exchangedAmount,
+    referenceTypeId,
+    referenceId,
+    description
+)
+SELECT
+    ABS(CHECKSUM(NEWID())) % 7 + 1,
+    (ABS(CHECKSUM(NEWID())) % 10000) + 100,
+    ABS(CHECKSUM(NEWID())) % 5 + 1,
+    ABS(CHECKSUM(NEWID())) % 5 + 1,
+    (ABS(CHECKSUM(NEWID())) % 10000) + 100,
+    4,
+    walletTransactionId,
+    'Expanded financial movement'
+FROM walletTransactions;
+
+
 /*=========================================================
   COMMISSIONS
 =========================================================*/
@@ -1989,10 +2098,10 @@ WHERE p.isWinner = 1;
 
 
 /*=========================================================
-  WALLET TRANSACTIONS - WINNER PAYOUTS
+  WALLET TRANSACTIONS 
 =========================================================*/
 
-INSERT INTO walletTransactions
+INSERT INTO walletTransactions -- WINNER PAYOUTS
 (
     originWalletId,
     destinationWalletId,
@@ -2040,6 +2149,40 @@ INNER JOIN wallets w
 
 WHERE p.isWinner = 1;
 
+DECLARE @wtCounter INT = 1;
+
+WHILE @wtCounter <= 5000
+BEGIN
+
+    INSERT INTO walletTransactions
+    (
+        originWalletId,
+        destinationWalletId,
+        isSelfTransaction,
+        pointsAmount,
+        transactionDateTime,
+        referenceTypeId,
+        referenceId
+    )
+    VALUES
+    (
+        CASE WHEN @wtCounter % 2 = 0 THEN 1001 ELSE ABS(CHECKSUM(NEWID())) % 1000 + 1 END,
+        ABS(CHECKSUM(NEWID())) % 1000 + 1,
+
+        CASE WHEN @wtCounter % 5 = 0 THEN 1 ELSE 0 END,
+
+        (ABS(CHECKSUM(NEWID())) % 5000) + 100,
+
+        DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 365), GETDATE()),
+
+        ABS(CHECKSUM(NEWID())) % 10 + 1,
+
+        ABS(CHECKSUM(NEWID())) % 5000 + 1
+    );
+
+    SET @wtCounter += 1;
+
+END;
 
 /*=========================================================
   PREDICTION PAYOUTS
@@ -2167,6 +2310,38 @@ SELECT
 
 FROM wallets w;
 
+DECLARE @wbCounter INT = 1;
+
+WHILE @wbCounter <= 2000
+BEGIN
+
+    INSERT INTO walletBalances
+    (
+        walletId,
+        statusTypeId,
+        oldPointsAmount,
+        balancePointsAmount,
+        newPointsAmount,
+        calculatedAt
+    )
+    VALUES
+    (
+        ABS(CHECKSUM(NEWID())) % 1000 + 1,
+
+        ABS(CHECKSUM(NEWID())) % 7 + 1,
+
+        (ABS(CHECKSUM(NEWID())) % 5000),
+
+        (ABS(CHECKSUM(NEWID())) % 10000),
+
+        (ABS(CHECKSUM(NEWID())) % 15000),
+
+        DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 365), GETDATE())
+    );
+
+    SET @wbCounter += 1;
+
+END;
 
 /*=========================================================
   FINANCIAL BALANCES HISTORY
@@ -2250,6 +2425,10 @@ BEGIN
 END;
 
 
+/*=========================================================
+  PENALTIES
+=========================================================*/
+
 INSERT INTO penalties
 (
     personId,
@@ -2272,6 +2451,9 @@ INNER JOIN penaltyTypes pt
        (1 + (ABS(CHECKSUM(NEWID())) % 5))
 WHERE r.reportId % 7 = 0;
 
+/*=========================================================
+  NOTIFICATIONS
+=========================================================*/
 
 INSERT INTO notifications
 (
@@ -2336,6 +2518,40 @@ SELECT
     r.createdAt
 FROM reports r;
 
+DECLARE @nCounter INT = 1;
+
+WHILE @nCounter <= 5000
+BEGIN
+
+    INSERT INTO notifications
+    (
+        notificationTypeId,
+        personId,
+        title,
+        message,
+        isRead,
+        readAt,
+        referenceTypeId,
+        referenceId,
+        auditPersonId
+    )
+    VALUES
+    (
+        ABS(CHECKSUM(NEWID())) % 8 + 1,
+        ABS(CHECKSUM(NEWID())) % 1000 + 1,
+        'System Notification',
+        CONCAT('Event generated #', @nCounter),
+        CASE WHEN @nCounter % 3 = 0 THEN 1 ELSE 0 END,
+        GETDATE(),
+        ABS(CHECKSUM(NEWID())) % 10 + 1,
+        ABS(CHECKSUM(NEWID())) % 5000 + 1,
+        1001
+    );
+
+    SET @nCounter += 1;
+
+END;
+
 
 /*=========================================================
   AUDIT LOGS
@@ -2387,41 +2603,44 @@ BEGIN
 
 END;
 
-
 /*=========================================================
   AI VALIDATION RESULTS
 =========================================================*/
 
-DECLARE @aiCounter INT = 1;
+INSERT INTO aiValidationResults
+(
+    propositionId,
+    statusTypeId,
+    aiComments,
+    auditPersonId
+)
+SELECT
+    p.propositionId,
 
-WHILE @aiCounter <= 5000
-BEGIN
+    CASE
+        WHEN p.statusTypesId = 2 THEN 2   -- Active
+        WHEN p.statusTypesId = 3 THEN 3   -- Completed
+        WHEN p.statusTypesId = 4 THEN 5   -- Rejected
+        ELSE 1                            -- Pending
+    END,
 
-    INSERT INTO aiValidationResults
-    (
-        propositionId,
-        statusTypeId,
-        aiComments,
-        auditPersonId
-    )
-    VALUES
-    (
-        @aiCounter,
+    CASE
+        WHEN p.statusTypesId = 2
+            THEN 'AI validation in progress'
 
-        CASE
-            WHEN @aiCounter % 10 < 7 THEN 2
-            WHEN @aiCounter % 10 < 9 THEN 3
-            ELSE 5
-        END,
+        WHEN p.statusTypesId = 3
+            THEN 'AI validation approved'
 
-        CONCAT('AI review for proposition ', @aiCounter),
+        WHEN p.statusTypesId = 4
+            THEN 'AI validation rejected'
 
-        1001
-    );
+        ELSE
+            'AI validation pending'
+    END,
 
-    SET @aiCounter += 1;
+    1001
 
-END;
+FROM propositions p;
 
 
 /*=========================================================
@@ -2458,76 +2677,8 @@ BEGIN
 
 END;
 
-
 /*=========================================================
-  WALLET TRANSACTIONS
-=========================================================*/
-
-DECLARE @wtCounter INT = 1;
-
-WHILE @wtCounter <= 5000
-BEGIN
-
-    INSERT INTO walletTransactions
-    (
-        originWalletId,
-        destinationWalletId,
-        isSelfTransaction,
-        pointsAmount,
-        transactionDateTime,
-        referenceTypeId,
-        referenceId
-    )
-    VALUES
-    (
-        CASE WHEN @wtCounter % 2 = 0 THEN 1001 ELSE ABS(CHECKSUM(NEWID())) % 1000 + 1 END,
-        ABS(CHECKSUM(NEWID())) % 1000 + 1,
-
-        CASE WHEN @wtCounter % 5 = 0 THEN 1 ELSE 0 END,
-
-        (ABS(CHECKSUM(NEWID())) % 5000) + 100,
-
-        DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 365), GETDATE()),
-
-        ABS(CHECKSUM(NEWID())) % 10 + 1,
-
-        ABS(CHECKSUM(NEWID())) % 5000 + 1
-    );
-
-    SET @wtCounter += 1;
-
-END;
-
-
-/*=========================================================
-  FINANCIAL MOVEMENTS (EXPANDED)
-=========================================================*/
-
-INSERT INTO financialMovements
-(
-    transactionTypeId,
-    amount,
-    currencyId,
-    exchangeRateId,
-    exchangedAmount,
-    referenceTypeId,
-    referenceId,
-    description
-)
-SELECT
-    ABS(CHECKSUM(NEWID())) % 7 + 1,
-    (ABS(CHECKSUM(NEWID())) % 10000) + 100,
-    ABS(CHECKSUM(NEWID())) % 5 + 1,
-    ABS(CHECKSUM(NEWID())) % 5 + 1,
-    (ABS(CHECKSUM(NEWID())) % 10000) + 100,
-    4,
-    walletTransactionId,
-    'Expanded financial movement'
-FROM walletTransactions;
-
-
-/*=========================================================
-  COMMISSIONS (FULL COVERAGE)
+  COMMISSIONS
 =========================================================*/
 
 DECLARE @cCounter INT = 1;
@@ -2573,75 +2724,6 @@ END;
 
 
 /*=========================================================
-  WALLET BALANCES (HISTORY SIMULATION)
-=========================================================*/
-
-DECLARE @wbCounter INT = 1;
-
-WHILE @wbCounter <= 2000
-BEGIN
-
-    INSERT INTO walletBalances
-    (
-        walletId,
-        statusTypeId,
-        oldPointsAmount,
-        balancePointsAmount,
-        newPointsAmount,
-        calculatedAt
-    )
-    VALUES
-    (
-        ABS(CHECKSUM(NEWID())) % 1000 + 1,
-
-        ABS(CHECKSUM(NEWID())) % 7 + 1,
-
-        (ABS(CHECKSUM(NEWID())) % 5000),
-
-        (ABS(CHECKSUM(NEWID())) % 10000),
-
-        (ABS(CHECKSUM(NEWID())) % 15000),
-
-        DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 365), GETDATE())
-    );
-
-    SET @wbCounter += 1;
-
-END;
-
-
-/*=========================================================
-  STATUS HISTORY (FULL COVERAGE)
-=========================================================*/
-
-DECLARE @shCounter INT = 1;
-
-WHILE @shCounter <= 5000
-BEGIN
-
-    INSERT INTO statusHistory
-    (
-        referenceTypeId,
-        referenceId,
-        statusTypeId,
-        changedAt,
-        auditPersonId
-    )
-    VALUES
-    (
-        ABS(CHECKSUM(NEWID())) % 10 + 1,
-        ABS(CHECKSUM(NEWID())) % 5000 + 1,
-        ABS(CHECKSUM(NEWID())) % 7 + 1,
-        DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 365), GETDATE()),
-        1001
-    );
-
-    SET @shCounter += 1;
-
-END;
-
-
-/*=========================================================
   EXCHANGE RATES HISTORY
 =========================================================*/
 
@@ -2672,112 +2754,5 @@ BEGIN
     );
 
     SET @erCounter += 1;
-
-END;
-
-
-/*=========================================================
-  WALLET RESERVATIONS EXPANDED
-=========================================================*/
-
-DECLARE @wrCounter INT = 1;
-
-WHILE @wrCounter <= 3000
-BEGIN
-
-    INSERT INTO walletReservations
-    (
-        walletId,
-        predictionId,
-        reservedPointsAmount,
-        reservedMoneyAmount,
-        statusTypeId,
-        reservedAt,
-        releasedAt,
-        auditPersonId
-    )
-    VALUES
-    (
-        ABS(CHECKSUM(NEWID())) % 1000 + 1,
-        ABS(CHECKSUM(NEWID())) % 5000 + 1,
-        (ABS(CHECKSUM(NEWID())) % 5000),
-        (ABS(CHECKSUM(NEWID())) % 2000),
-        ABS(CHECKSUM(NEWID())) % 7 + 1,
-        GETDATE(),
-        CASE WHEN @wrCounter % 3 = 0 THEN GETDATE() ELSE NULL END,
-        1001
-    );
-
-    SET @wrCounter += 1;
-
-END;
-
-
-/*=========================================================
-  NOTIFICATIONS EXPANDED
-=========================================================*/
-
-DECLARE @nCounter INT = 1;
-
-WHILE @nCounter <= 5000
-BEGIN
-
-    INSERT INTO notifications
-    (
-        notificationTypeId,
-        personId,
-        title,
-        message,
-        isRead,
-        readAt,
-        referenceTypeId,
-        referenceId,
-        auditPersonId
-    )
-    VALUES
-    (
-        ABS(CHECKSUM(NEWID())) % 8 + 1,
-        ABS(CHECKSUM(NEWID())) % 1000 + 1,
-        'System Notification',
-        CONCAT('Event generated #', @nCounter),
-        CASE WHEN @nCounter % 3 = 0 THEN 1 ELSE 0 END,
-        GETDATE(),
-        ABS(CHECKSUM(NEWID())) % 10 + 1,
-        ABS(CHECKSUM(NEWID())) % 5000 + 1,
-        1001
-    );
-
-    SET @nCounter += 1;
-
-END;
-
-
-/*=========================================================
-  SECURITY EVENTS EXPANDED
-=========================================================*/
-
-DECLARE @seCounter INT = 1;
-
-WHILE @seCounter <= 5000
-BEGIN
-
-    INSERT INTO securityEvents
-    (
-        securityEventTypeId,
-        personId,
-        authSessionId,
-        eventDateTime,
-        details
-    )
-    VALUES
-    (
-        ABS(CHECKSUM(NEWID())) % 6 + 1,
-        ABS(CHECKSUM(NEWID())) % 1000 + 1,
-        ABS(CHECKSUM(NEWID())) % 5000 + 1,
-        DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 365), GETDATE()),
-        'Automated security event'
-    );
-
-    SET @seCounter += 1;
 
 END;
