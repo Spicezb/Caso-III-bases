@@ -81,7 +81,7 @@
 * updatedAt timestamp (DEFAULT GETDATE())
 * isdeleted BOOLEAN (DEFAULT 0)
 
-## statusTypes         posibles status generales para distintas tablas
+## statusTypes 
 
 * statusTypeId SERIAL PK
 * name VARCHAR(40)
@@ -198,7 +198,6 @@ UNIQUE(socialPlatformId, username)
 * personId INT FK people
 * refreshToken BYTEA
 * ipAddress VARCHAR(100)
-* userAgent VARCHAR(255)
 * expiresAt timestamp (DEFAULT GETDATE())
 * lastActivityAt timestamp (DEFAULT GETDATE())
 * isRevoked BOOLEAN (DEFAULT 0)
@@ -594,7 +593,6 @@ UNIQUE(propositionId, personId)
 * securityEventTypeId INT FK securityEventTypes
 * personId INT FK people 
 * authSessionId INT FK authSessions
-* userAgent VARCHAR(255)
 * eventDateTime timestamp (DEFAULT GETDATE())
 * details VARCHAR(500)
 * createdAt timestamp (DEFAULT GETDATE())
