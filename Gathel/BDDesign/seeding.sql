@@ -471,16 +471,57 @@ INSERT INTO referenceTypes
     name
 )
 VALUES
+('PeopleType'),
+('Country'),
+('ReportType'),
+('Currency'),
+('ReferenceType'),
+('PaymentMethod'),
+('CommissionType'),
+('StatusType'),
+('PenaltyType'),
+('SocialPlatform'),
+('State'),
+('City'),
+('Address'),
+('People'),
+('SocialAccount'),
+('Wallet'),
+('AuthSession'),
+('ExchangeRate'),
 ('Proposition'),
+('PropositionVote'),
+('PropositionLike'),
+('PropositionComment'),
+('FileType'),
+('File'),
+('FileUsageType'),
+('FileReference'),
 ('Prediction'),
-('WalletTransaction'),
-('Transaction'),
 ('Report'),
 ('Penalty'),
-('Notification'),
+('WalletBalance'),
+('WalletTransaction'),
+('TransactionType'),
+('TransactionAttempt'),
+('Transaction'),
+('FinancialMovement'),
+('FinancialBalanceHistory'),
 ('Commission'),
+('NotificationType'),
+('Notification'),
+('StatusHistory'),
+('AuditLog'),
+('PredictionPayout'),
 ('WalletReservation'),
-('Payout');
+('AiValidationResult'),
+('SecurityEventType'),
+('SecurityEvent'),
+('PermissionType'),
+('Permission'),
+('RolePermission'),
+('PeoplePermission');
+GO
 
 
 /*=========================================================
@@ -2587,7 +2628,6 @@ SET @nCounter += 1;
 END;
 
 
-
 /*=========================================================
   AUDIT LOGS
 =========================================================*/
@@ -2599,8 +2639,8 @@ BEGIN
 
     INSERT INTO auditLogs
     (
-        tableName,
-        recordId,
+        referenceTypeId,
+        referenceId,
         actionType,
         oldValue,
         newValue,
@@ -2609,15 +2649,9 @@ BEGIN
     )
     VALUES
     (
-        CASE ABS(CHECKSUM(NEWID())) % 5
-            WHEN 0 THEN 'people'
-            WHEN 1 THEN 'propositions'
-            WHEN 2 THEN 'transactions'
-            WHEN 3 THEN 'predictions'
-            ELSE 'wallets'
-        END,
+        ABS(CHECKSUM(NEWID())) % 50 + 1,
 
-        ABS(CHECKSUM(NEWID())) % 1000 + 1,
+        ABS(CHECKSUM(NEWID())) % 5000 + 1,
 
         CASE ABS(CHECKSUM(NEWID())) % 3
             WHEN 0 THEN 'INSERT'
@@ -2625,18 +2659,30 @@ BEGIN
             ELSE 'DELETE'
         END,
 
-        NULL,
+        CASE ABS(CHECKSUM(NEWID())) % 3
+            WHEN 0 THEN NULL
+            ELSE CONCAT('old_value_', @auditCounter)
+        END,
 
-        CONCAT('value_', @auditCounter),
+        CASE ABS(CHECKSUM(NEWID())) % 3
+            WHEN 2 THEN NULL
+            ELSE CONCAT('new_value_', @auditCounter)
+        END,
 
         ABS(CHECKSUM(NEWID())) % 1000 + 1,
 
-        DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 365), GETDATE())
+        DATEADD
+        (
+            DAY,
+            -(ABS(CHECKSUM(NEWID())) % 365),
+            GETDATE()
+        )
     );
 
     SET @auditCounter += 1;
 
 END;
+GO
 
 /*=========================================================
   AI VALIDATION RESULTS
@@ -2791,3 +2837,148 @@ BEGIN
     SET @erCounter += 1;
 
 END;
+
+/*=========================================================
+  PERMISSION TYPES
+=========================================================*/
+
+INSERT INTO permissionTypes
+(
+    name,
+    description
+)
+VALUES
+('View',   'Allows viewing records'),
+('Create', 'Allows creating records'),
+('Edit',   'Allows editing records'),
+('Delete', 'Allows deleting records');
+GO
+
+/*=========================================================
+  PERMISSIONS
+=========================================================*/
+
+INSERT INTO permissions
+(
+    permissionTypeId,
+    referenceTypeId
+)
+SELECT
+    pt.permissionTypeId,
+    rt.referenceTypeId
+FROM permissionTypes pt
+CROSS JOIN referenceTypes rt;
+GO
+
+/*=========================================================
+  PERMISSION FOR ADMINS
+=========================================================*/
+
+INSERT INTO rolePermissions 
+(
+    peopleTypeId,
+    permissionId
+)
+SELECT
+    2,
+    permissionId
+FROM permissions;
+GO
+
+/*=========================================================
+  PERMISSION FOR MODERATOR
+=========================================================*/
+
+INSERT INTO rolePermissions 
+(
+    peopleTypeId,
+    permissionId
+)
+SELECT
+    3,
+    p.permissionId
+FROM permissions p
+INNER JOIN permissionTypes pt
+    ON pt.permissionTypeId = p.permissionTypeId
+INNER JOIN referenceTypes rt
+    ON rt.referenceTypeId = p.referenceTypeId
+WHERE
+(
+    rt.name IN
+    (
+        'Proposition',
+        'Prediction',
+        'Report',
+        'Notification'
+    )
+    AND pt.name IN ('View','Edit')
+)
+OR
+(
+    rt.name = 'Penalty'
+    AND pt.name IN ('View','Create')
+);
+GO
+
+/*=========================================================
+  PERMISSION FOR AUDITOR
+=========================================================*/
+
+INSERT INTO rolePermissions 
+(
+    peopleTypeId,
+    permissionId
+)
+SELECT
+    4,
+    p.permissionId
+FROM permissions p
+INNER JOIN permissionTypes pt
+    ON pt.permissionTypeId = p.permissionTypeId
+INNER JOIN referenceTypes rt
+    ON rt.referenceTypeId = p.referenceTypeId
+WHERE
+    pt.name = 'View';
+GO
+
+/*=========================================================
+  PERMISSION FOR PLAYER
+=========================================================*/
+
+INSERT INTO rolePermissions 
+(
+    peopleTypeId,
+    permissionId
+)
+SELECT
+    1,
+    p.permissionId
+FROM permissions p
+INNER JOIN permissionTypes pt
+    ON pt.permissionTypeId = p.permissionTypeId
+INNER JOIN referenceTypes rt
+    ON rt.referenceTypeId = p.referenceTypeId
+WHERE
+(
+    rt.name IN
+    (
+        'Proposition',
+        'Prediction'
+    )
+    AND pt.name IN
+    (
+        'View',
+        'Create'
+    )
+)
+OR
+(
+    rt.name IN
+    (
+        'WalletTransaction',
+        'WalletReservation',
+        'Notification'
+    )
+    AND pt.name = 'View'
+);
+GO

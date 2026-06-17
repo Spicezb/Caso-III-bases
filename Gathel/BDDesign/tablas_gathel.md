@@ -528,8 +528,8 @@ UNIQUE(propositionId, personId)
 ## auditLogs
 
 * logId SERIAL PK
-* tableName VARCHAR(60)
-* recordId INT
+* referenceTypeId INT FK referenceTypes 
+* referenceId INT
 * actionType VARCHAR(30)
 * oldValue VARCHAR(500)
 * newValue VARCHAR(500)
@@ -598,3 +598,39 @@ UNIQUE(propositionId, personId)
 * createdAt timestamp (DEFAULT GETDATE())
 * updatedAt timestamp (DEFAULT GETDATE())
 * isDeleted BOOLEAN (DEFAULT 0)
+
+## permissionTypes
+
+* permissionTypeId SERIAL PK
+* name VARCHAR(20)
+* description VARCHAR(100)
+* createdAt timestamp (DEFAULT CURRENT_TIMESTAMP)
+* updatedAt timestamp (DEFAULT CURRENT_TIMESTAMP)
+* isDeleted BOOLEAN (DEFAULT FALSE)
+
+## permissions
+
+* permissionId SERIAL PK
+* permissionTypeId INT FK permissionTypes UNIQUE
+* referenceTypeId INT FK referenceTypes UNIQUE
+* createdAt timestamp (DEFAULT CURRENT_TIMESTAMP)
+* updatedAt timestamp (DEFAULT CURRENT_TIMESTAMP)
+* isDeleted BOOLEAN (DEFAULT FALSE)
+
+## rolePermissions
+
+* rolePermissionId SERIAL PK
+* peopleTypeId INT FK peopleTypes UNIQUE
+* permissionId INT FK permissions UNIQUE
+* createdAt timestamp (DEFAULT CURRENT_TIMESTAMP)
+* updatedAt timestamp (DEFAULT CURRENT_TIMESTAMP)
+* isDeleted BOOLEAN (DEFAULT FALSE)
+
+## peoplePermissions
+
+* peoplePermissionId SERIAL PK
+* peopleId INT FK people UNIQUE
+* permissionId INT FK permissions UNIQUE
+* createdAt timestamp (DEFAULT CURRENT_TIMESTAMP)
+* updatedAt timestamp (DEFAULT CURRENT_TIMESTAMP)
+* isDeleted BOOLEAN (DEFAULT FALSE)
