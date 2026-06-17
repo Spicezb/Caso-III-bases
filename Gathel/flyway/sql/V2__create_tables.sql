@@ -1,3 +1,7 @@
+/*
+Script de creación de las tablas
+*/
+
 USE GathelDB;
 GO
 

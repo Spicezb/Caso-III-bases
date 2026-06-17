@@ -1,3 +1,7 @@
+/*
+Seeding principal de datos
+*/
+
 USE GathelDB;
 GO
 
@@ -1208,8 +1212,17 @@ END;
 
 DECLARE @seCounter INT = 1;
 
+DECLARE @randomSessionId INT;
+DECLARE @randomPersonId INT;
+
 WHILE @seCounter <= 5000
 BEGIN
+
+    SELECT TOP 1
+        @randomSessionId = authSessionId,
+        @randomPersonId = personId
+    FROM authSessions
+    ORDER BY NEWID();
 
     INSERT INTO securityEvents
     (
@@ -1222,8 +1235,8 @@ BEGIN
     VALUES
     (
         ABS(CHECKSUM(NEWID())) % 6 + 1,
-        ABS(CHECKSUM(NEWID())) % 1000 + 1,
-        ABS(CHECKSUM(NEWID())) % 5000 + 1,
+        @randomPersonId,
+        @randomSessionId,
         DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 365), GETDATE()),
         'Automated security event'
     );
