@@ -86,6 +86,7 @@ export default function PronosticarPage({
   // Pantalla de confirmación
   // ---------------------------------------------------------------------------
   if (submitted) {
+    const newLocal = <p className="mt-1 text-sm text-foreground">&quot;{prop.text}&quot;</p>;
     return (
       <AppShell>
         <div className="mx-auto flex max-w-sm flex-col items-center py-16 text-center">
@@ -109,7 +110,7 @@ export default function PronosticarPage({
 
           <div className="mt-4 w-full rounded-xl border border-(--border) bg-(--surface) p-4 text-left">
             <p className="text-xs text-(--muted)">Proposición</p>
-            <p className="mt-1 text-sm text-(--foreground)">"{prop.text}"</p>
+            {newLocal}
             <div className="mt-3 flex items-center justify-between text-xs text-(--muted)">
               <span>Bolsa acumulada</span>
               <span className="text-(--foreground)">{prop.pool}</span>
@@ -155,23 +156,23 @@ export default function PronosticarPage({
       <div className="mx-auto max-w-sm">
         <Link
           href={`/dashboard/proposicion/${id}`}
-          className="inline-flex items-center gap-1.5 text-sm text-(--muted) hover:text-(--foreground) transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors"
         >
           <ArrowLeft size={15} aria-hidden="true" />
           Volver al detalle
         </Link>
 
-        <h1 className="mt-5 font-display text-2xl font-semibold tracking-tight text-(--foreground)">
+        <h1 className="mt-5 font-display text-2xl font-semibold tracking-tight text-foreground">
           Hacer un pronóstico
         </h1>
 
         {/* Resumen de la proposición */}
-        <div className="mt-4 rounded-xl border border-(--border) bg-(--surface) p-4">
-          <p className="text-sm leading-relaxed text-(--foreground)">"{prop.text}"</p>
-          <div className="mt-2 flex items-center gap-2 text-xs text-(--muted)">
+        <div className="mt-4 rounded-xl border border-border bg-surface p-4">
+          <p className="text-sm leading-relaxed text-foreground">&quot;{prop.text}&quot;</p>
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted">
             <span>{prop.pool} en la bolsa</span>
             <span>·</span>
-            <span className="text-(--accent)">{prop.timeLeft}</span>
+            <span className="text-accent">{prop.timeLeft}</span>
           </div>
         </div>
 
