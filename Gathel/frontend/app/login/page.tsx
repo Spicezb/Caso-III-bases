@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Checkbox,
@@ -13,17 +14,45 @@ import {
 } from "@heroui/react";
 import { Eye, EyeOff } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import { login } from "@/lib/gathel-api";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage("");
 
-    // TODO: conectar con el endpoint de login del backend (REST API)
-    setTimeout(() => setIsSubmitting(false), 800);
+    const formData = new FormData(e.currentTarget);
+
+    const identifier = String(formData.get("email") || "");
+    const password = String(formData.get("password") || "");
+
+    try {
+      const response = await login({
+        identifier,
+        password,
+      });
+
+      localStorage.setItem("personId", String(response.person.personId));
+      localStorage.setItem("username", response.person.username);
+      localStorage.setItem("email", response.person.email);
+
+      router.push("/dashboard");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo iniciar sesión."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -33,13 +62,17 @@ export default function LoginPage() {
       subtitle="Entra para ver tus proposiciones activas, tu balance y lo que está pasando ahora."
     >
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <TextField name="email" type="email" isRequired>
+        <TextField name="email" type="text" isRequired>
           <Label>Correo o nombre de usuario</Label>
-          <Input placeholder="tu@correo.com" />
+          <Input placeholder="tu@correo.com o usuario" />
           <FieldError />
         </TextField>
 
-        <TextField name="password" type={showPassword ? "text" : "password"} isRequired>
+        <TextField
+          name="password"
+          type={showPassword ? "text" : "password"}
+          isRequired
+        >
           <Label>Contraseña</Label>
           <div className="relative">
             <Input placeholder="Tu contraseña" className="pr-10" />
@@ -56,6 +89,12 @@ export default function LoginPage() {
           </div>
           <FieldError />
         </TextField>
+
+        {errorMessage && (
+          <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {errorMessage}
+          </p>
+        )}
 
         <div className="flex items-center justify-between">
           <Checkbox name="remember">
@@ -77,7 +116,6 @@ export default function LoginPage() {
 
         <Button
           type="submit"
-          variant="primary"
           size="lg"
           fullWidth
           isDisabled={isSubmitting}
@@ -95,13 +133,22 @@ export default function LoginPage() {
       <div className="flex flex-col gap-3">
         <button
           type="button"
-          className={buttonVariants({ variant: "outline", size: "lg", fullWidth: true })}
+          className={buttonVariants({
+            variant: "outline",
+            size: "lg",
+            fullWidth: true,
+          })}
         >
           Continuar con Instagram
         </button>
+
         <button
           type="button"
-          className={buttonVariants({ variant: "outline", size: "lg", fullWidth: true })}
+          className={buttonVariants({
+            variant: "outline",
+            size: "lg",
+            fullWidth: true,
+          })}
         >
           Continuar con TikTok
         </button>
