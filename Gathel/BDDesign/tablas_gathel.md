@@ -27,30 +27,10 @@
 * updatedAt timestamp (DEFAULT GETDATE())
 * isdeleted BOOLEAN (DEFAULT 0)
 
-## propositionStatuses
-
-* propositionStatusId SERIAL PK
-* name VARCHAR(40)
-* description VARCHAR(120)
-* auditpersonId INT FK people
-* createdAt timestamp (DEFAULT GETDATE())
-* updatedAt timestamp (DEFAULT GETDATE())
-* isdeleted BOOLEAN (DEFAULT 0)
-
-## predictionStatuses
-
-* predictionStatusId SERIAL PK
-* name VARCHAR(40)
-* description VARCHAR(120)
-* auditpersonId INT FK people
-* createdAt timestamp (DEFAULT GETDATE())
-* updatedAt timestamp (DEFAULT GETDATE())
-* isdeleted BOOLEAN (DEFAULT 0)
-
 ## reportTypes
 
 * reportTypeId SERIAL PK
-* name VARCHAR(40)
+* name VARCHAR(40) UNIQUE
 * description VARCHAR(120)
 * auditpersonId INT FK people
 * createdAt timestamp (DEFAULT GETDATE())
@@ -61,7 +41,7 @@
 
 * currencyId SERIAL PK
 * name VARCHAR(30)
-* code VARCHAR(10)
+* code VARCHAR(10) UNIQUE
 * symbol VARCHAR(10)
 * auditpersonId INT FK people
 * isDefaultCurrencie BOOLEAN (DEFAULT 0)
@@ -73,16 +53,6 @@
 
 * referenceTypeId SERIAL PK
 * name VARCHAR(30)
-* auditpersonId INT FK people
-* createdAt timestamp (DEFAULT GETDATE())
-* updatedAt timestamp (DEFAULT GETDATE())
-* isdeleted BOOLEAN (DEFAULT 0)
-
-## walletTransactionTypes
-
-* walletTransactionTypeId SERIAL PK
-* name VARCHAR(40)
-* description VARCHAR(120)
 * auditpersonId INT FK people
 * createdAt timestamp (DEFAULT GETDATE())
 * updatedAt timestamp (DEFAULT GETDATE())
@@ -111,7 +81,7 @@
 * updatedAt timestamp (DEFAULT GETDATE())
 * isdeleted BOOLEAN (DEFAULT 0)
 
-## statusTypes
+## statusTypes 
 
 * statusTypeId SERIAL PK
 * name VARCHAR(40)
@@ -124,7 +94,7 @@
 ## penaltyTypes
 
 * penaltyTypeId SERIAL PK
-* name VARCHAR(40)
+* name VARCHAR(40) UNIQUE
 * description VARCHAR(120)
 * pointsPercentage NUMERIC(5,2)
 * auditpersonId INT FK people
@@ -174,7 +144,7 @@
 ## people
 
 * personId SERIAL PK
-* personTypeId INT FK peopleTypes
+* peopleTypeId INT FK peopleTypes
 * name VARCHAR(60)
 * lastName VARCHAR(60)
 * identification VARCHAR(30)
@@ -228,7 +198,6 @@ UNIQUE(socialPlatformId, username)
 * personId INT FK people
 * refreshToken BYTEA
 * ipAddress VARCHAR(100)
-* userAgent VARCHAR(255)
 * expiresAt timestamp (DEFAULT GETDATE())
 * lastActivityAt timestamp (DEFAULT GETDATE())
 * isRevoked BOOLEAN (DEFAULT 0)
@@ -253,7 +222,7 @@ UNIQUE(socialPlatformId, username)
 
 * propositionId SERIAL PK
 * parentproposition INT FK propositions (Default NULL)
-* propositionStatusId INT FK propositionStatuses
+* statusTypesId INT FK statusTypes
 * creatorPersonId INT FK people
 * targetPersonId INT FK people
 * targetSocialAccountId INT FK socialAccounts
@@ -359,7 +328,7 @@ UNIQUE(propositionId, personId)
 ## predictions
 
 * predictionId SERIAL PK
-* predictionStatusId INT FK predictionStatuses
+* statusTypesId INT FK statusTypes
 * propositionId INT FK propositions
 * personId INT FK people
 * predictionValue BOOLEAN
@@ -404,7 +373,7 @@ UNIQUE(propositionId, personId)
 
 * walletBalanceId SERIAL PK
 * walletId INT FK wallets
-* walletTransactionTypeId INT FK walletTransactionTypes
+* statusTypeId INT FK statusTypes
 * oldPointsAmount NUMERIC(16,2)
 * balancePointsAmount NUMERIC(16,2)
 * newPointsAmount NUMERIC(16,2)
@@ -459,6 +428,7 @@ UNIQUE(propositionId, personId)
 ## transactions
 
 * transactionId SERIAL PK
+* transactionAttemptId FK transactionAttempts
 * personId INT FK people
 * transactionTypeId INT FK transactionTypes
 * paymentMethodId INT FK paymentMethods
@@ -520,7 +490,7 @@ UNIQUE(propositionId, personId)
 ## notificationTypes
 
 * notificationTypeId SERIAL PK
-* name VARCHAR(40)
+* name VARCHAR(40) UNIQUE
 * description VARCHAR(120)
 * auditpersonId INT FK people
 * createdAt timestamp (DEFAULT GETDATE())
@@ -568,3 +538,63 @@ UNIQUE(propositionId, personId)
 * createdAt timestamp (DEFAULT GETDATE())
 * updatedAt timestamp (DEFAULT GETDATE())
 * isdeleted BOOLEAN (DEFAULT 0)
+
+## predictionPayouts 
+
+* predictionPayoutId SERIAL PK 
+* predictionId FK predictions
+* walletTransactionId FK walletTransactions
+* moneyPayoutAmount NUMERIC(8,2)
+* pointsPayoutAmount NUMERIC(8,2)
+* commissionAmount NUMERIC(8,2)
+* executedAt TIMESTAMP (DEFAULT GETDATE())
+* createdAt timestamp (DEFAULT GETDATE())
+* updatedAt timestamp (DEFAULT GETDATE())
+* isdeleted BOOLEAN (DEFAULT 0)
+
+## walletReservations
+
+* walletReservationId SERIAL PK
+* walletId INT FK wallets
+* predictionId INT FK predictions
+* reservedPointsAmount NUMERIC(16,2)
+* reservedMoneyAmount NUMERIC(16,2)
+* statusTypeId INT FK statusTypes
+* reservedAt timestamp (DEFAULT GETDATE())
+* releasedAt timestamp DEFAULT NULL
+* auditPersonId INT FK people
+* createdAt timestamp (DEFAULT GETDATE())
+* updatedAt timestamp (DEFAULT GETDATE())
+* isDeleted BOOLEAN (DEFAULT 0)
+
+## aiValidationResults
+
+* validationId SERIAL PK
+* propositionId INT FK propositions
+* statusTypeId INT FK statusTypes
+* aiComments VARCHAR(500)
+* auditPersonId INT FK people
+* createdAt timestamp (DEFAULT GETDATE())
+* updatedAt timestamp (DEFAULT GETDATE())
+* isDeleted BOOLEAN (DEFAULT 0)
+
+## securityEventTypes
+
+* securityEventTypeId SERIAL PK
+* name VARCHAR(50) UNIQUE
+* description VARCHAR(200)
+* createdAt timestamp (DEFAULT GETDATE())
+* updatedAt timestamp (DEFAULT GETDATE())
+* isDeleted BOOLEAN (DEFAULT 0)
+
+## securityEvents
+
+* securityEventId SERIAL PK
+* securityEventTypeId INT FK securityEventTypes
+* personId INT FK people 
+* authSessionId INT FK authSessions
+* eventDateTime timestamp (DEFAULT GETDATE())
+* details VARCHAR(500)
+* createdAt timestamp (DEFAULT GETDATE())
+* updatedAt timestamp (DEFAULT GETDATE())
+* isDeleted BOOLEAN (DEFAULT 0)
