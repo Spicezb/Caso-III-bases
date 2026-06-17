@@ -973,7 +973,7 @@ END;
   AUTH SESSIONS
 =========================================================*/
 
-DECLARE @personId INT = 1;
+SET @personId = 1;
 DECLARE @sessionCount INT;
 DECLARE @sessionNumber INT;
 DECLARE @sessionCreated DATETIME2(3);
@@ -1404,7 +1404,7 @@ DECLARE @propositionId INT = 1;
 DECLARE @votesToCreate INT;
 DECLARE @currentVote INT;
 
-DECLARE @personId INT;
+SET @personId = 1;
 DECLARE @voteValue BIT;
 
 WHILE @propositionId <= 5000
@@ -1544,8 +1544,6 @@ SET @propositionId = 1;
 DECLARE @commentsToCreate INT;
 DECLARE @currentComment INT;
 
-DECLARE @createdAt DATETIME2(3);
-
 WHILE @propositionId <= 5000
 BEGIN
 
@@ -1666,15 +1664,15 @@ END;
   PREDICTIONS
 =========================================================*/
 
-DECLARE @propositionId INT = 1;
+SET @propositionId = 1;
 
-DECLARE @statusId INT;
+SET @statusId = 1;
 DECLARE @winningOption BIT;
 
 DECLARE @predictionsToCreate INT;
 DECLARE @currentPrediction INT;
 
-DECLARE @personId INT;
+SET @personId = 1;
 
 DECLARE @predictionValue BIT;
 
@@ -1856,13 +1854,13 @@ INNER JOIN propositions pr
   TRANSACTION ATTEMPTS
 =========================================================*/
 
-DECLARE @personId INT = 1;
+SET @personId = 1;
 
 DECLARE @attemptsToCreate INT;
 DECLARE @currentAttempt INT;
 
 DECLARE @transactionTypeId INT;
-DECLARE @currencyId INT;
+SET @currencyId = 1;
 DECLARE @amount NUMERIC(16,2);
 
 WHILE @personId <= 1000
@@ -2344,178 +2342,209 @@ BEGIN
 END;
 
 /*=========================================================
-  FINANCIAL BALANCES HISTORY
+FINANCIAL BALANCES HISTORY
 =========================================================*/
 
 INSERT INTO financialBalancesHistory
 (
-    totalBalance,
-    calculatedAt
+totalBalance,
+calculatedAt
 )
 SELECT
-    SUM(amount),
-
-    GETDATE()
-
+SUM(amount),
+GETDATE()
 FROM financialMovements;
 
-DECLARE @propositionId INT = 1;
+SET @propositionId = 1;
+
 DECLARE @reportsToCreate INT;
 DECLARE @currentReport INT;
-
 DECLARE @reportTypeId INT;
-DECLARE @personId INT;
+
+SET @personId = 1;
 
 WHILE @propositionId <= 5000
 BEGIN
 
-    SET @reportsToCreate =
-        CASE
-            WHEN @propositionId % 100 < 60 THEN ABS(CHECKSUM(NEWID())) % 2
-            WHEN @propositionId % 100 < 85 THEN ABS(CHECKSUM(NEWID())) % 5
-            ELSE ABS(CHECKSUM(NEWID())) % 12 + 3
-        END;
 
-    SET @currentReport = 1;
+SET @reportsToCreate =
+    CASE
+        WHEN @propositionId % 100 < 60 THEN ABS(CHECKSUM(NEWID())) % 2
+        WHEN @propositionId % 100 < 85 THEN ABS(CHECKSUM(NEWID())) % 5
+        ELSE ABS(CHECKSUM(NEWID())) % 12 + 3
+    END;
 
-    WHILE @currentReport <= @reportsToCreate
+SET @currentReport = 1;
+
+WHILE @currentReport <= @reportsToCreate
+BEGIN
+
+    SET @personId =
+        ABS(CHECKSUM(NEWID())) % 1000 + 1;
+
+    SET @reportTypeId =
+        ABS(CHECKSUM(NEWID())) % 6 + 1;
+
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM reports
+        WHERE propositionId = @propositionId
+          AND reporterPersonId = @personId
+    )
     BEGIN
 
-        SET @personId = ABS(CHECKSUM(NEWID())) % 1000 + 1;
-
-        SET @reportTypeId = ABS(CHECKSUM(NEWID())) % 6 + 1;
-
-        IF NOT EXISTS
+        INSERT INTO reports
         (
-            SELECT 1
-            FROM reports
-            WHERE referenceTypeId = 1
-              AND referenceId = @propositionId
-              AND personId = @personId
+            reportTypeId,
+            reportedPersonId,
+            reporterPersonId,
+            propositionId,
+            description,
+            auditPersonId
         )
-        BEGIN
+        VALUES
+        (
+            @reportTypeId,
 
-            INSERT INTO reports
             (
-                referenceTypeId,
-                referenceId,
-                personId,
-                reportTypeId,
-                description,
-                createdAt
-            )
-            VALUES
+                SELECT creatorPersonId
+                FROM propositions
+                WHERE propositionId = @propositionId
+            ),
+
+            @personId,
+
+            @propositionId,
+
+            CONCAT
             (
-                1, -- Proposition
-                @propositionId,
-                @personId,
-                @reportTypeId,
-                CONCAT('Report for proposition ', @propositionId),
-                DATEADD(DAY, -(ABS(CHECKSUM(NEWID())) % 30), GETDATE())
-            );
+                'Report for proposition ',
+                @propositionId
+            ),
 
-        END;
-
-        SET @currentReport += 1;
+            1001
+        );
 
     END;
 
-    SET @propositionId += 1;
+    SET @currentReport += 1;
 
 END;
 
+SET @propositionId += 1;
+
+
+END;
 
 /*=========================================================
-  PENALTIES
+PENALTIES
 =========================================================*/
 
 INSERT INTO penalties
 (
-    personId,
-    penaltyTypeId,
-    referenceTypeId,
-    referenceId,
-    pointsPercentage,
-    appliedAt
+penaltyTypeId,
+reportId,
+pointsAmount,
+reasonDescription,
+executedAt,
+auditPersonId
 )
 SELECT
-    r.personId,
-    1 + (ABS(CHECKSUM(NEWID())) % 5),
-    r.referenceTypeId,
-    r.referenceId,
-    pt.pointsPercentage,
-    r.createdAt
-FROM reports r
-INNER JOIN penaltyTypes pt
-    ON pt.penaltyTypeId =
-       (1 + (ABS(CHECKSUM(NEWID())) % 5))
-WHERE r.reportId % 7 = 0;
+1 + (ABS(CHECKSUM(NEWID())) % 5),
+
+
+reportId,
+
+CAST
+(
+    (ABS(CHECKSUM(NEWID())) % 901) + 100
+    AS NUMERIC(16,2)
+),
+
+CONCAT
+(
+    'Penalty generated from report ',
+    reportId
+),
+
+createdAt,
+
+1001
+
+
+FROM reports
+
+WHERE reportId % 7 = 0;
 
 /*=========================================================
-  NOTIFICATIONS
+NOTIFICATIONS
 =========================================================*/
 
 INSERT INTO notifications
 (
-    personId,
-    notificationTypeId,
-    title,
-    message,
-    isRead,
-    createdAt
+personId,
+notificationTypeId,
+title,
+message,
+isRead,
+createdAt
 )
 SELECT
-    p.personId,
-    CASE
-        WHEN p.isWinner = 1 THEN 3 -- PredictionWon
-        ELSE 4 -- PredictionLost
-    END,
-    CASE
-        WHEN p.isWinner = 1 THEN 'You won a prediction'
-        ELSE 'You lost a prediction'
-    END,
-    CONCAT('Result for proposition ', p.propositionId),
-    0,
-    GETDATE()
+p.personId,
+CASE
+WHEN p.isWinner = 1 THEN 3
+ELSE 4
+END,
+CASE
+WHEN p.isWinner = 1 THEN 'You won a prediction'
+ELSE 'You lost a prediction'
+END,
+CONCAT('Result for proposition ', p.propositionId),
+0,
+GETDATE()
 FROM predictions p;
-
 
 INSERT INTO notifications
 (
-    personId,
-    notificationTypeId,
-    title,
-    message,
-    isRead,
-    createdAt
+personId,
+notificationTypeId,
+title,
+message,
+isRead,
+createdAt
 )
 SELECT
-    ta.personId,
-    5, -- TransactionCompleted
-    'Transaction completed',
-    CONCAT('Transaction of ', ta.amount, ' processed successfully'),
-    0,
-    ta.attemptedAt
+ta.personId,
+5,
+'Transaction completed',
+CONCAT('Transaction of ', ta.amount, ' processed successfully'),
+0,
+ta.attemptedAt
 FROM transactionAttempts ta
 WHERE ta.istransactionLoaded = 1;
 
-
 INSERT INTO notifications
 (
-    personId,
-    notificationTypeId,
-    title,
-    message,
-    isRead,
-    createdAt
+personId,
+notificationTypeId,
+title,
+message,
+isRead,
+createdAt
 )
 SELECT
-    r.personId,
-    6, -- ReportReceived
-    'Report received',
-    CONCAT('Your report on reference ', r.referenceId, ' was submitted'),
-    0,
-    r.createdAt
+r.reporterPersonId,
+6,
+'Report received',
+CONCAT
+(
+'Your report on proposition ',
+r.propositionId,
+' was submitted'
+),
+0,
+r.createdAt
 FROM reports r;
 
 DECLARE @nCounter INT = 1;
@@ -2523,34 +2552,37 @@ DECLARE @nCounter INT = 1;
 WHILE @nCounter <= 5000
 BEGIN
 
-    INSERT INTO notifications
-    (
-        notificationTypeId,
-        personId,
-        title,
-        message,
-        isRead,
-        readAt,
-        referenceTypeId,
-        referenceId,
-        auditPersonId
-    )
-    VALUES
-    (
-        ABS(CHECKSUM(NEWID())) % 8 + 1,
-        ABS(CHECKSUM(NEWID())) % 1000 + 1,
-        'System Notification',
-        CONCAT('Event generated #', @nCounter),
-        CASE WHEN @nCounter % 3 = 0 THEN 1 ELSE 0 END,
-        GETDATE(),
-        ABS(CHECKSUM(NEWID())) % 10 + 1,
-        ABS(CHECKSUM(NEWID())) % 5000 + 1,
-        1001
-    );
 
-    SET @nCounter += 1;
+INSERT INTO notifications
+(
+    notificationTypeId,
+    personId,
+    title,
+    message,
+    isRead,
+    readAt,
+    referenceTypeId,
+    referenceId,
+    auditPersonId
+)
+VALUES
+(
+    ABS(CHECKSUM(NEWID())) % 8 + 1,
+    ABS(CHECKSUM(NEWID())) % 1000 + 1,
+    'System Notification',
+    CONCAT('Event generated #', @nCounter),
+    CASE WHEN @nCounter % 3 = 0 THEN 1 ELSE 0 END,
+    GETDATE(),
+    ABS(CHECKSUM(NEWID())) % 10 + 1,
+    ABS(CHECKSUM(NEWID())) % 5000 + 1,
+    1001
+);
+
+SET @nCounter += 1;
+
 
 END;
+
 
 
 /*=========================================================
