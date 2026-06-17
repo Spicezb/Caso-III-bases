@@ -15,7 +15,7 @@ import {
 } from "@heroui/react";
 import { ArrowLeft, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { useUser } from "@/lib/mock-user";
+import { useUser } from "@/lib/user-context";
 
 // ---------------------------------------------------------------------------
 // Datos mock — reemplazar con fetch GET /proposiciones/:id

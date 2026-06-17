@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Avatar, Chip, Tabs, Button } from "@heroui/react";
 import { TrendingUp, TrendingDown, Clock, Link2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { useUser } from "@/lib/mock-user";
+import { useUser } from "@/lib/user-context";
 
 type HistorialItem = {
   id: string;

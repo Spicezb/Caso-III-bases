@@ -13,7 +13,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { useUser } from "@/lib/mock-user";
+import { useUser } from "@/lib/user-context";
 
 // ---------------------------------------------------------------------------
 // Datos mock — reemplazar con fetch al endpoint GET /proposiciones/:id

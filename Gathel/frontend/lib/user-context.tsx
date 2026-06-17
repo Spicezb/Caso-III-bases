@@ -1,19 +1,10 @@
 "use client";
 
-/**
- * MVP Mock User Context
- *
- * Simula la sesión autenticada del usuario mientras el backend de auth
- * no está integrado. Cuando el REST API esté listo, reemplazar este
- * contexto con la respuesta real del endpoint de /auth/me o similar.
- *
- * TODO: reemplazar con contexto real conectado al backend
- */
-
 import { createContext, useContext, useState } from "react";
 
 export type MockUser = {
   id: string;
+  personId: number;
   name: string;
   handle: string;
   email: string;
@@ -29,16 +20,17 @@ export type MockUser = {
 
 const DEFAULT_USER: MockUser = {
   id: "usr_001",
-  name: "Elizabeth Vargas",
-  handle: "@eliruns",
-  email: "elizabeth@example.com",
-  avatarFallback: "EV",
-  pointsBalance: 128,
-  moneyBalance: 42.5,
-  activePropositions: 5,
-  followers: 312,
-  following: 87,
-  joinedAt: "Mayo 2025",
+  personId: 1,
+  name: "Sebastian Aguilar",
+  handle: "@sebas_test",
+  email: "sebastian@test.com",
+  avatarFallback: "SA",
+  pointsBalance: 0,
+  moneyBalance: 0,
+  activePropositions: 0,
+  followers: 0,
+  following: 0,
+  joinedAt: "Junio 2026",
   connectedNetworks: ["instagram"],
 };
 
@@ -54,10 +46,11 @@ const UserContext = createContext<UserContextType>({
 
 export function MockUserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<MockUser>(DEFAULT_USER);
+
   return (
-    <UserContext value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, setUser }}>
       {children}
-    </UserContext>
+    </UserContext.Provider>
   );
 }
 

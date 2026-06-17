@@ -38,4 +38,22 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Next / Node
+node_modules/
+.next/
+out/
+
+# Env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
