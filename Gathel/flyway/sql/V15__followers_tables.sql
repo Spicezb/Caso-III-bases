@@ -124,7 +124,7 @@ BEGIN
         CASE
             WHEN @followRequestCounter <= 1500 THEN 1
             WHEN @followRequestCounter <= 2200 THEN 5
-            ELSE 8
+            ELSE 16
         END;
 
     IF NOT EXISTS
@@ -158,7 +158,7 @@ BEGIN
             ),
 
             CASE
-                WHEN @statusTypeId IN (5,8)
+                WHEN @statusTypeId IN (5,16)
                 THEN DATEADD
                 (
                     DAY,
@@ -196,5 +196,5 @@ SELECT
         requestDate
     )
 FROM followRequests
-WHERE statusTypeId = 8;
+WHERE statusTypeId = 16;
 GO
