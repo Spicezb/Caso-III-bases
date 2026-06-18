@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { Avatar, Chip, buttonVariants } from "@heroui/react";
-import { Users, Clock, ArrowRight, CheckCircle } from "lucide-react";
+import {
+  Users,
+  Clock,
+  ArrowRight,
+  CheckCircle,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
 
 export type Proposition = {
   id: string;
@@ -54,8 +61,17 @@ function avatarFallback(author: string) {
   );
 }
 
+function calculateMultiplier(probability: number) {
+  const safeProbability = Math.max(probability, 5);
+
+  return Number((100 / safeProbability).toFixed(2));
+}
+
 export default function PropositionCard({ item }: { item: Proposition }) {
   const isActive = item.status === "activa";
+
+  const yesMultiplier = calculateMultiplier(item.probability);
+  const noMultiplier = calculateMultiplier(100 - item.probability);
 
   return (
     <article className="rounded-2xl border border-(--border) bg-(--surface) p-5">
@@ -104,6 +120,30 @@ export default function PropositionCard({ item }: { item: Proposition }) {
             className="h-full rounded-full bg-(--accent)"
             style={{ width: `${item.probability}%` }}
           />
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+          <div className="rounded-lg border border-(--border) bg-(--surface-secondary) px-3 py-2">
+            <div className="flex items-center gap-1.5 text-(--muted)">
+              <TrendingUp size={13} className="text-(--success)" />
+              <span>Sí</span>
+            </div>
+
+            <p className="mt-0.5 font-display text-base font-semibold text-(--success)">
+              x{yesMultiplier.toFixed(2)}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-(--border) bg-(--surface-secondary) px-3 py-2">
+            <div className="flex items-center gap-1.5 text-(--muted)">
+              <TrendingDown size={13} className="text-(--danger)" />
+              <span>No</span>
+            </div>
+
+            <p className="mt-0.5 font-display text-base font-semibold text-(--danger)">
+              x{noMultiplier.toFixed(2)}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -172,7 +212,8 @@ export default function PropositionCard({ item }: { item: Proposition }) {
             Esta proposición es tuya.
           </p>
           <p className="mt-0.5 text-xs text-(--muted)">
-            No podés hacer pronósticos en una proposición que creaste o que es sobre vos.
+            No podés hacer pronósticos en una proposición que creaste o que es
+            sobre vos.
           </p>
         </div>
       )}

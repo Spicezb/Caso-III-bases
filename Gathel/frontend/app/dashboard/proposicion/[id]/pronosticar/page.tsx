@@ -41,6 +41,8 @@ type PropositionForPrediction = {
   pool: string;
   timeLeft: string;
   mode: PredictionMode;
+  yesMultiplier: number;
+  noMultiplier: number;
 };
 
 function getTimeLeft(dateText: string) {
@@ -59,6 +61,26 @@ function getTimeLeft(dateText: string) {
   if (diffHours < 24) return `quedan ${diffHours} h`;
 
   return `quedan ${diffDays} días`;
+}
+
+function calculateYesProbability(predictions: PredictionResponse[]) {
+  if (predictions.length === 0) {
+    return 50;
+  }
+
+  const yesVotes = predictions.filter((p) => p.predictionValue).length;
+
+  return Math.round((yesVotes / predictions.length) * 100);
+}
+
+function calculateMultiplier(probability: number) {
+  const safeProbability = Math.max(probability, 5);
+
+  return Number((100 / safeProbability).toFixed(2));
+}
+
+function calculatePotentialWin(amount: number, multiplier: number) {
+  return Number((amount * multiplier).toFixed(2));
 }
 
 function detectPredictionMode(
@@ -130,6 +152,8 @@ function mapProposition(
   predictions: PredictionResponse[]
 ): PropositionForPrediction {
   const mode = detectPredictionMode(p, predictions);
+  const yesProbability = calculateYesProbability(predictions);
+  const noProbability = 100 - yesProbability;
 
   return {
     id: String(p.propositionId),
@@ -137,6 +161,8 @@ function mapProposition(
     pool: calculatePool(predictions, p.minimumEntryPointsAmount, mode),
     timeLeft: getTimeLeft(p.endPredictionDateTime),
     mode,
+    yesMultiplier: calculateMultiplier(yesProbability),
+    noMultiplier: calculateMultiplier(noProbability),
   };
 }
 
@@ -163,6 +189,13 @@ export default function PronosticarPage({
 
   const usarPuntos = metodo === "puntos";
   const montoNum = parseFloat(monto) || 0;
+
+  const selectedMultiplier =
+    voto === "si" ? prop?.yesMultiplier ?? 1 : prop?.noMultiplier ?? 1;
+
+  const betAmount = usarPuntos ? MAX_POINTS : montoNum;
+
+  const potentialWin = calculatePotentialWin(betAmount, selectedMultiplier);
 
   useEffect(() => {
     async function loadData() {
@@ -328,7 +361,8 @@ export default function PronosticarPage({
             <span className="font-medium text-(--foreground)">
               {voto === "si" ? "sí va a pasar" : "no va a pasar"}
             </span>{" "}
-            usando {usarPuntos ? `${MAX_POINTS} punto` : `$${montoNum.toFixed(2)}`}.
+            usando{" "}
+            {usarPuntos ? `${MAX_POINTS} punto` : `$${montoNum.toFixed(2)}`}.
           </p>
 
           <div className="mt-4 w-full rounded-xl border border-(--border) bg-(--surface) p-4 text-left">
@@ -346,6 +380,22 @@ export default function PronosticarPage({
             <div className="flex items-center justify-between text-xs text-(--muted)">
               <span>Cierra</span>
               <span className="text-(--accent)">{prop.timeLeft}</span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-(--muted)">
+              <span>Multiplicador usado</span>
+              <span className="text-(--foreground)">
+                x{selectedMultiplier.toFixed(2)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-(--muted)">
+              <span>Ganancia potencial</span>
+              <span className="text-(--foreground)">
+                {usarPuntos
+                  ? `${potentialWin.toFixed(2)} pts`
+                  : `$${potentialWin.toFixed(2)}`}
+              </span>
             </div>
           </div>
 
@@ -401,13 +451,26 @@ export default function PronosticarPage({
             <span>·</span>
             <span className="text-(--accent)">{prop.timeLeft}</span>
           </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg border border-(--border) bg-(--surface-secondary) p-2">
+              <p className="text-(--muted)">Sí</p>
+              <p className="font-semibold text-(--success)">
+                x{prop.yesMultiplier.toFixed(2)}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-(--border) bg-(--surface-secondary) p-2">
+              <p className="text-(--muted)">No</p>
+              <p className="font-semibold text-(--danger)">
+                x{prop.noMultiplier.toFixed(2)}
+              </p>
+            </div>
+          </div>
         </div>
 
         <form className="mt-6 flex flex-col gap-5" onSubmit={handleSubmit}>
-          <RadioGroup
-            value={voto}
-            onChange={(v) => setVoto(v as "si" | "no")}
-          >
+          <RadioGroup value={voto} onChange={(v) => setVoto(v as "si" | "no")}>
             <Label>Tu pronóstico</Label>
 
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -428,15 +491,9 @@ export default function PronosticarPage({
 
                     <div className="flex items-center gap-1.5">
                       {v === "si" ? (
-                        <TrendingUp
-                          size={15}
-                          className="text-(--success)"
-                        />
+                        <TrendingUp size={15} className="text-(--success)" />
                       ) : (
-                        <TrendingDown
-                          size={15}
-                          className="text-(--danger)"
-                        />
+                        <TrendingDown size={15} className="text-(--danger)" />
                       )}
 
                       <Label className="cursor-pointer text-sm font-medium text-(--foreground)">
@@ -564,6 +621,22 @@ export default function PronosticarPage({
                 </div>
 
                 <div className="flex justify-between">
+                  <span className="text-(--muted)">Multiplicador</span>
+                  <span className="font-medium text-(--foreground)">
+                    x{selectedMultiplier.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-(--muted)">Ganancia potencial</span>
+                  <span className="font-medium text-(--foreground)">
+                    {usarPuntos
+                      ? `${potentialWin.toFixed(2)} pts`
+                      : `$${potentialWin.toFixed(2)}`}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
                   <span className="text-(--muted)">Balance tras apostar</span>
                   <span className="font-medium text-(--foreground)">
                     {usarPuntos
@@ -580,9 +653,7 @@ export default function PronosticarPage({
             variant="primary"
             size="lg"
             fullWidth
-            isDisabled={
-              isSubmitting || (usarPuntos && person.pointsBalance < 1)
-            }
+            isDisabled={isSubmitting || (usarPuntos && person.pointsBalance < 1)}
           >
             {isSubmitting ? "Registrando…" : "Confirmar pronóstico"}
           </Button>

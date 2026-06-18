@@ -42,6 +42,8 @@ type PropositionDetail = {
   mode: "puntos" | "dinero" | "ambos";
   probability: number;
   pool: string;
+  yesMultiplier: number;
+  noMultiplier: number;
   timeLeft: string;
   deadline: string;
   votes: number;
@@ -92,7 +94,9 @@ function modeChip(mode: PropositionDetail["mode"]) {
   );
 }
 
-function normalizeStatus(status: string | null | undefined): PropositionDetail["status"] {
+function normalizeStatus(
+  status: string | null | undefined
+): PropositionDetail["status"] {
   const value = (status ?? "").toLowerCase();
 
   if (value.includes("no")) return "no cumplida";
@@ -180,6 +184,22 @@ function calculateProbability(predictions: Prediction[]) {
   return Math.round((yesVotes / predictions.length) * 100);
 }
 
+function calculateMultiplier(probability: number) {
+  const safeProbability = Math.max(probability, 5);
+
+  return Number((100 / safeProbability).toFixed(2));
+}
+
+function calculateMultipliers(probability: number) {
+  const yesProbability = probability;
+  const noProbability = 100 - probability;
+
+  return {
+    yesMultiplier: calculateMultiplier(yesProbability),
+    noMultiplier: calculateMultiplier(noProbability),
+  };
+}
+
 function calculatePool(
   predictions: Prediction[],
   fallbackPoints: number | null,
@@ -222,7 +242,6 @@ function calculatePool(
 
   return `${totalPoints} pts`;
 }
-
 
 function detectMode(predictions: Prediction[]): PropositionDetail["mode"] {
   const hasPoints = predictions.some((p) => p.amount.includes("pt"));
@@ -282,6 +301,8 @@ function mapPropositionToDetail(
   predictions: Prediction[]
 ): PropositionDetail {
   const mode = detectPropositionMode(p, predictions);
+  const probability = calculateProbability(predictions);
+  const multipliers = calculateMultipliers(probability);
 
   return {
     id: String(p.propositionId),
@@ -292,8 +313,10 @@ function mapPropositionToDetail(
     text: p.title || p.description || "Proposición sin título",
     status: normalizeStatus(p.status),
     mode,
-    probability: calculateProbability(predictions),
+    probability,
     pool: calculatePool(predictions, p.minimumEntryPointsAmount, mode),
+    yesMultiplier: multipliers.yesMultiplier,
+    noMultiplier: multipliers.noMultiplier,
     timeLeft: getTimeLeft(p.endPredictionDateTime),
     deadline: formatDeadline(p.endPredictionDateTime),
     votes: predictions.length,
@@ -342,11 +365,9 @@ export default function ProposicionDetallePage({
             if (a.isCurrentUser && !b.isCurrentUser) return -1;
             if (!a.isCurrentUser && b.isCurrentUser) return 1;
             return 0;
-        });
+          });
 
-        setItem(
-          mapPropositionToDetail(propositionResponse, mappedPredictions)
-        );
+        setItem(mapPropositionToDetail(propositionResponse, mappedPredictions));
       } catch (error) {
         setErrorMessage(
           error instanceof Error
@@ -394,6 +415,7 @@ export default function ProposicionDetallePage({
   const siCount = item.predictions.filter((p) => p.vote === "si").length;
   const noCount = item.predictions.filter((p) => p.vote === "no").length;
   const isActive = item.status === "activa";
+
   const isMine =
     currentPersonId !== null &&
     (currentPersonId === item.creatorPersonId ||
@@ -491,6 +513,45 @@ export default function ProposicionDetallePage({
           </div>
         </div>
 
+        <div className="mt-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
+          <p className="text-xs uppercase tracking-widest text-(--muted)">
+            Multiplicadores actuales
+          </p>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-(--border) bg-(--surface-secondary) p-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={15} className="text-(--success)" />
+                <p className="text-sm font-medium text-(--foreground)">
+                  Sí va a pasar
+                </p>
+              </div>
+
+              <p className="mt-2 font-display text-2xl font-semibold text-(--success)">
+                x{item.yesMultiplier.toFixed(2)}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-(--border) bg-(--surface-secondary) p-4">
+              <div className="flex items-center gap-2">
+                <TrendingDown size={15} className="text-(--danger)" />
+                <p className="text-sm font-medium text-(--foreground)">
+                  No va a pasar
+                </p>
+              </div>
+
+              <p className="mt-2 font-display text-2xl font-semibold text-(--danger)">
+                x{item.noMultiplier.toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-3 text-xs text-(--muted)">
+            El multiplicador cambia según cómo se distribuyen los pronósticos de
+            la comunidad.
+          </p>
+        </div>
+
         {item.status !== "activa" && (
           <div className="mt-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
             <p className="text-xs uppercase tracking-widest text-(--muted)">
@@ -509,8 +570,8 @@ export default function ProposicionDetallePage({
                   aria-hidden="true"
                 />
                 <p className="text-sm text-(--muted)">
-                  La evidencia fue analizada por IA a partir de publicaciones
-                  en redes sociales con el hashtag #gathel.
+                  La evidencia fue analizada por IA a partir de publicaciones en
+                  redes sociales con el hashtag #gathel.
                 </p>
               </div>
             )}
@@ -524,8 +585,8 @@ export default function ProposicionDetallePage({
             </p>
 
             <p className="mt-1 text-sm text-(--muted)">
-              No se permite pronosticar en proposiciones que creaste o que son sobre vos,
-              para evitar conflictos de interés.
+              No se permite pronosticar en proposiciones que creaste o que son
+              sobre vos, para evitar conflictos de interés.
             </p>
 
             <div className="mt-4 flex items-center gap-2">
@@ -648,9 +709,7 @@ export default function ProposicionDetallePage({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-(--muted)">
-                      {p.amount}
-                    </span>
+                    <span className="text-xs text-(--muted)">{p.amount}</span>
 
                     {p.vote === "si" ? (
                       <Chip color="success" variant="soft" size="sm">
