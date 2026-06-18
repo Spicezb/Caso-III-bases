@@ -1,102 +1,317 @@
 "use client";
 
-import { Tabs } from "@heroui/react";
-import PropositionCard, { Proposition } from "@/components/PropositionCard";
+import { useEffect, useState } from "react";
+import { Button, Tabs } from "@heroui/react";
+import PropositionCard from "@/components/PropositionCard";
+import type { Proposition } from "@/components/PropositionCard";
+import {
+  getActivePropositions,
+  getPredictionsByProposition,
+} from "@/lib/gathel-api";
+import type {
+  PredictionResponse,
+  PropositionResponse,
+} from "@/lib/gathel-api";
 
-const PARA_TI: Proposition[] = [
-  {
-    id: "1",
-    author: "Karina M.",
-    handle: "@karina",
-    text: "Elizabeth terminará la maratón dentro de los primeros 30 lugares.",
-    probability: 64,
-    pool: "812 pts",
-    timeLeft: "quedan 6 h",
-    votes: 304,
-    status: "activa",
-    mode: "puntos",
-  },
-  {
-    id: "2",
-    author: "Diego F.",
-    handle: "@diegof",
-    text: "Subo el video del lanzamiento del producto antes del viernes a medianoche.",
-    probability: 78,
-    pool: "$64",
-    timeLeft: "quedan 2 días",
-    votes: 132,
-    status: "activa",
-    mode: "dinero",
-  },
-  {
-    id: "3",
-    author: "Luis C.",
-    handle: "@luisc",
-    text: "Llego al gimnasio los 5 días de esta semana.",
-    probability: 55,
-    pool: "390 pts",
-    timeLeft: "quedan 18 h",
-    votes: 211,
-    status: "activa",
-    mode: "puntos",
-  },
-];
+const PAGE_SIZE = 25;
 
-const SIGUIENDO: Proposition[] = [
-  {
-    id: "4",
-    author: "Marian Q.",
-    handle: "@marianq",
-    text: "No publica nada en redes sociales este fin de semana.",
-    probability: 23,
-    pool: "205 pts",
-    timeLeft: "finalizó",
-    votes: 89,
-    status: "no cumplida",
-    mode: "puntos",
-  },
-  {
-    id: "5",
-    author: "Pablo N.",
-    handle: "@pablon",
-    text: "Su equipo gana el partido del domingo por más de 2 goles.",
-    probability: 18,
-    pool: "150 pts",
-    timeLeft: "quedan 3 días",
-    votes: 162,
-    status: "activa",
-    mode: "puntos",
-  },
-];
+type PropositionBatch = {
+  title: string;
+  items: Proposition[];
+};
 
-const MIAS: Proposition[] = [
-  {
-    id: "6",
-    author: "Elizabeth V.",
-    handle: "@eliruns",
-    text: "Voy a lograr al menos el décimo lugar en la maratón.",
-    probability: 41,
-    pool: "$128",
-    timeLeft: "quedan 6 h",
-    votes: 87,
-    status: "activa",
-    mode: "ambos",
-  },
-  {
-    id: "7",
-    author: "Elizabeth V.",
-    handle: "@eliruns",
-    text: "Termino de leer el libro antes de fin de mes.",
-    probability: 91,
-    pool: "$30",
-    timeLeft: "finalizó",
-    votes: 47,
-    status: "cumplida",
-    mode: "dinero",
-  },
-];
+function normalizeStatus(status: string): Proposition["status"] {
+  const value = status.toLowerCase();
+
+  if (value.includes("no")) return "no cumplida";
+  if (value.includes("cumpl")) return "cumplida";
+
+  return "activa";
+}
+
+function getTimeLeft(dateText: string) {
+  const deadline = new Date(dateText);
+  const now = new Date();
+
+  if (Number.isNaN(deadline.getTime())) {
+    return "—";
+  }
+
+  const diffMs = deadline.getTime() - now.getTime();
+  const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.ceil(diffHours / 24);
+
+  if (diffMs <= 0) return "finalizó";
+  if (diffHours < 24) return `quedan ${diffHours} h`;
+
+  return `quedan ${diffDays} días`;
+}
+
+function calculateProbability(predictions: PredictionResponse[]) {
+  if (predictions.length === 0) {
+    return 50;
+  }
+
+  const yesVotes = predictions.filter((p) => p.predictionValue).length;
+  return Math.round((yesVotes / predictions.length) * 100);
+}
+
+function calculatePool(
+  predictions: PredictionResponse[],
+  fallbackPoints: number | null
+) {
+  if (predictions.length === 0) {
+    return `${fallbackPoints ?? 0} pts`;
+  }
+
+  const totalPoints = predictions.reduce(
+    (total, p) => total + (p.pointsAmount ?? 0),
+    0
+  );
+
+  const totalMoney = predictions.reduce(
+    (total, p) => total + (p.moneyAmount ?? 0),
+    0
+  );
+
+  if (totalPoints > 0 && totalMoney > 0) {
+    return `${totalPoints} pts · $${totalMoney.toFixed(2)}`;
+  }
+
+  if (totalMoney > 0) {
+    return `$${totalMoney.toFixed(2)}`;
+  }
+
+  return `${totalPoints} pts`;
+}
+
+function detectMode(predictions: PredictionResponse[]): Proposition["mode"] {
+  const hasPoints = predictions.some(
+    (p) => p.pointsAmount !== null && p.pointsAmount !== undefined
+  );
+
+  const hasMoney = predictions.some(
+    (p) => p.moneyAmount !== null && p.moneyAmount !== undefined
+  );
+
+  if (hasPoints && hasMoney) return "ambos";
+  if (hasMoney) return "dinero";
+
+  return "puntos";
+}
+
+function mapProposition(
+  p: PropositionResponse,
+  predictions: PredictionResponse[],
+  currentPersonId: number | null
+): Proposition {
+  const isMine =
+    currentPersonId !== null &&
+    (p.creatorPersonId === currentPersonId ||
+      p.targetPersonId === currentPersonId);
+
+  const alreadyVoted =
+    currentPersonId !== null &&
+    predictions.some((prediction) => prediction.personId === currentPersonId);
+
+  return {
+    id: String(p.propositionId),
+    author: `Usuario ${p.creatorPersonId}`,
+    handle: `@user${p.creatorPersonId}`,
+    text: p.title || p.description || "Proposición sin título",
+    probability: calculateProbability(predictions),
+    pool: calculatePool(predictions, p.minimumEntryPointsAmount),
+    timeLeft: getTimeLeft(p.endPredictionDateTime),
+    votes: predictions.length,
+    status: normalizeStatus(p.status),
+    mode: detectMode(predictions),
+    alreadyVoted,
+    isMine,
+  };
+}
+
+async function buildCards(
+  propositions: PropositionResponse[],
+  currentPersonId: number | null
+) {
+  const cards = await Promise.all(
+    propositions.map(async (proposition) => {
+      try {
+        const predictions = await getPredictionsByProposition(
+          proposition.propositionId
+        );
+
+        return mapProposition(proposition, predictions, currentPersonId);
+      } catch {
+        return mapProposition(proposition, [], currentPersonId);
+      }
+    })
+  );
+
+  return cards;
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-(--border) bg-(--surface) py-10 text-center">
+      <p className="text-sm text-(--muted)">{message}</p>
+    </div>
+  );
+}
+
+function PropositionList({ items }: { items: Proposition[] }) {
+  if (items.length === 0) {
+    return <EmptyState message="No hay proposiciones para mostrar." />;
+  }
+
+  return (
+    <>
+      {items.map((item) => (
+        <PropositionCard key={item.id} item={item} />
+      ))}
+    </>
+  );
+}
+
+function PropositionBatchList({ batches }: { batches: PropositionBatch[] }) {
+  if (batches.length === 0) {
+    return <EmptyState message="No hay proposiciones para mostrar." />;
+  }
+
+  return (
+    <>
+      {batches.map((batch, index) => (
+        <section key={`${batch.title}-${index}`} className="flex flex-col gap-4">
+          {index > 0 && (
+            <div className="mt-2 flex items-center gap-3">
+              <div className="h-px flex-1 bg-(--border)" />
+              <p className="text-xs uppercase tracking-widest text-(--muted)">
+                {batch.title}
+              </p>
+              <div className="h-px flex-1 bg-(--border)" />
+            </div>
+          )}
+
+          {index === 0 && (
+            <p className="text-xs uppercase tracking-widest text-(--muted)">
+              Más recientes
+            </p>
+          )}
+
+          <PropositionList items={batch.items} />
+        </section>
+      ))}
+    </>
+  );
+}
 
 export default function DashboardFeed() {
+  const [allPropositions, setAllPropositions] = useState<PropositionResponse[]>(
+    []
+  );
+
+  const [paraTiBatches, setParaTiBatches] = useState<PropositionBatch[]>([]);
+  const [mias, setMias] = useState<Proposition[]>([]);
+  const [siguiendo] = useState<Proposition[]>([]);
+
+  const [currentPersonId, setCurrentPersonId] = useState<number | null>(null);
+  const [loadedCount, setLoadedCount] = useState(0);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const hasMore = loadedCount < allPropositions.length;
+
+  useEffect(() => {
+    async function loadFeed() {
+      try {
+        setIsLoading(true);
+        setErrorMessage("");
+
+        const storedPersonId = localStorage.getItem("personId");
+        const personId = storedPersonId ? Number(storedPersonId) : null;
+
+        setCurrentPersonId(personId);
+
+        const propositions = await getActivePropositions();
+        setAllPropositions(propositions);
+
+        const firstBatchRaw = propositions.slice(0, PAGE_SIZE);
+        const firstCards = await buildCards(firstBatchRaw, personId);
+
+        setParaTiBatches([
+          {
+            title: "Más recientes",
+            items: firstCards,
+          },
+        ]);
+
+        setMias(firstCards.filter((item) => item.isMine));
+        setLoadedCount(firstBatchRaw.length);
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar las proposiciones."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadFeed();
+  }, []);
+
+  async function handleShowMore() {
+    if (isLoadingMore || !hasMore) {
+      return;
+    }
+
+    try {
+      setIsLoadingMore(true);
+
+      const start = loadedCount;
+      const end = loadedCount + PAGE_SIZE;
+
+      const nextBatchRaw = allPropositions.slice(start, end);
+      const nextCards = await buildCards(nextBatchRaw, currentPersonId);
+
+      setParaTiBatches((prev) => [
+        ...prev,
+        {
+          title: `Cargadas después ${start + 1}-${start + nextCards.length}`,
+          items: nextCards,
+        },
+      ]);
+
+      setMias((prev) => [
+        ...prev,
+        ...nextCards.filter((item) => item.isMine),
+      ]);
+
+      setLoadedCount((prev) => prev + nextBatchRaw.length);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-2xl border border-(--border) bg-(--surface) py-10 text-center">
+        <p className="text-sm text-(--muted)">Cargando proposiciones...</p>
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
+        {errorMessage}
+      </div>
+    );
+  }
+
   return (
     <Tabs defaultSelectedKey="para-ti">
       <Tabs.ListContainer>
@@ -105,30 +320,57 @@ export default function DashboardFeed() {
           <Tabs.Tab id="siguiendo">Siguiendo</Tabs.Tab>
           <Tabs.Tab id="mias">Mías</Tabs.Tab>
         </Tabs.List>
-
       </Tabs.ListContainer>
 
       <Tabs.Panel id="para-ti">
         <div className="mt-4 flex flex-col gap-4">
-          {PARA_TI.map((item) => (
-            <PropositionCard key={item.id} item={item} />
-          ))}
+          <PropositionBatchList batches={paraTiBatches} />
+
+          {hasMore && (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              fullWidth
+              isDisabled={isLoadingMore}
+              onClick={handleShowMore}
+            >
+              {isLoadingMore ? "Cargando..." : "Mostrar más"}
+            </Button>
+          )}
         </div>
       </Tabs.Panel>
 
       <Tabs.Panel id="siguiendo">
         <div className="mt-4 flex flex-col gap-4">
-          {SIGUIENDO.map((item) => (
-            <PropositionCard key={item.id} item={item} />
-          ))}
+          {siguiendo.length > 0 ? (
+            <PropositionList items={siguiendo} />
+          ) : (
+            <EmptyState message="Todavía no estamos cargando proposiciones de usuarios seguidos." />
+          )}
         </div>
       </Tabs.Panel>
 
       <Tabs.Panel id="mias">
         <div className="mt-4 flex flex-col gap-4">
-          {MIAS.map((item) => (
-            <PropositionCard key={item.id} item={item} />
-          ))}
+          {mias.length > 0 ? (
+            <PropositionList items={mias} />
+          ) : (
+            <EmptyState message="Todavía no tenés proposiciones activas visibles." />
+          )}
+
+          {hasMore && (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              fullWidth
+              isDisabled={isLoadingMore}
+              onClick={handleShowMore}
+            >
+              {isLoadingMore ? "Cargando..." : "Mostrar más"}
+            </Button>
+          )}
         </div>
       </Tabs.Panel>
     </Tabs>

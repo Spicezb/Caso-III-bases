@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Avatar, Chip, buttonVariants } from "@heroui/react";
-import { Users, Clock, ArrowRight } from "lucide-react";
+import { Users, Clock, ArrowRight, CheckCircle } from "lucide-react";
 
 export type Proposition = {
   id: string;
@@ -16,18 +15,46 @@ export type Proposition = {
   votes: number;
   status: "activa" | "cumplida" | "no cumplida";
   mode: "puntos" | "dinero" | "ambos";
+  alreadyVoted?: boolean;
+  isMine?: boolean;
 };
 
 function statusChip(status: Proposition["status"]) {
-  if (status === "cumplida")
-    return <Chip color="success" variant="soft" size="sm"><Chip.Label>cumplida</Chip.Label></Chip>;
-  if (status === "no cumplida")
-    return <Chip color="danger" variant="soft" size="sm"><Chip.Label>no cumplida</Chip.Label></Chip>;
-  return <Chip color="accent" variant="soft" size="sm"><Chip.Label>activa</Chip.Label></Chip>;
+  if (status === "cumplida") {
+    return (
+      <Chip color="success" variant="soft" size="sm">
+        <Chip.Label>cumplida</Chip.Label>
+      </Chip>
+    );
+  }
+
+  if (status === "no cumplida") {
+    return (
+      <Chip color="danger" variant="soft" size="sm">
+        <Chip.Label>no cumplida</Chip.Label>
+      </Chip>
+    );
+  }
+
+  return (
+    <Chip color="accent" variant="soft" size="sm">
+      <Chip.Label>activa</Chip.Label>
+    </Chip>
+  );
+}
+
+function avatarFallback(author: string) {
+  return (
+    author
+      .split(" ")
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "U"
+  );
 }
 
 export default function PropositionCard({ item }: { item: Proposition }) {
-  const [vote, setVote] = useState<"si" | "no" | null>(null);
   const isActive = item.status === "activa";
 
   return (
@@ -35,29 +62,31 @@ export default function PropositionCard({ item }: { item: Proposition }) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <Avatar size="sm">
-            <Avatar.Fallback>
-              {item.author.split(" ").map((p) => p[0]).join("")}
-            </Avatar.Fallback>
+            <Avatar.Fallback>{avatarFallback(item.author)}</Avatar.Fallback>
           </Avatar>
+
           <div className="leading-tight">
-            <p className="text-sm font-medium text-(--foreground)">{item.author}</p>
+            <p className="text-sm font-medium text-(--foreground)">
+              {item.author}
+            </p>
             <p className="text-xs text-(--muted)">{item.handle}</p>
           </div>
         </div>
+
         {statusChip(item.status)}
       </div>
 
-      {/* Título navegable */}
       <Link
         href={`/dashboard/proposicion/${item.id}`}
         className="group mt-3 flex items-start justify-between gap-2"
       >
-        <p className="text-sm leading-relaxed text-(--foreground) group-hover:text-(--accent) transition-colors">
-          "{item.text}"
+        <p className="text-sm leading-relaxed text-(--foreground) transition-colors group-hover:text-(--accent)">
+          &quot;{item.text}&quot;
         </p>
+
         <ArrowRight
           size={14}
-          className="mt-0.5 shrink-0 text-(--muted) group-hover:text-(--accent) transition-colors"
+          className="mt-0.5 shrink-0 text-(--muted) transition-colors group-hover:text-(--accent)"
           aria-hidden="true"
         />
       </Link>
@@ -65,8 +94,11 @@ export default function PropositionCard({ item }: { item: Proposition }) {
       <div className="mt-4">
         <div className="flex items-center justify-between text-xs text-(--muted)">
           <span>Probabilidad de la comunidad</span>
-          <span className="font-display font-semibold text-(--accent)">{item.probability}%</span>
+          <span className="font-display font-semibold text-(--accent)">
+            {item.probability}%
+          </span>
         </div>
+
         <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-(--default)">
           <div
             className="h-full rounded-full bg-(--accent)"
@@ -80,48 +112,68 @@ export default function PropositionCard({ item }: { item: Proposition }) {
           <Users size={14} aria-hidden="true" />
           {item.votes} pronósticos · {item.pool}
         </span>
+
         <span className="flex items-center gap-1">
           <Clock size={14} aria-hidden="true" />
           {item.timeLeft}
         </span>
       </div>
 
-      {isActive && (
-        <div className="mt-4">
-          {vote === null ? (
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setVote("si")}
-                className={buttonVariants({ variant: "secondary", size: "md", fullWidth: true })}
-              >
-                Sí va a pasar
-              </button>
-              <button
-                type="button"
-                onClick={() => setVote("no")}
-                className={buttonVariants({ variant: "outline", size: "md", fullWidth: true })}
-              >
-                No va a pasar
-              </button>
+      {isActive && !item.alreadyVoted && !item.isMine && (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Link
+            href={`/dashboard/proposicion/${item.id}/pronosticar?voto=si`}
+            className={buttonVariants({
+              variant: "secondary",
+              size: "md",
+              fullWidth: true,
+            })}
+          >
+            Sí va a pasar
+          </Link>
+
+          <Link
+            href={`/dashboard/proposicion/${item.id}/pronosticar?voto=no`}
+            className={buttonVariants({
+              variant: "outline",
+              size: "md",
+              fullWidth: true,
+            })}
+          >
+            No va a pasar
+          </Link>
+        </div>
+      )}
+
+      {isActive && item.alreadyVoted && (
+        <div className="mt-4 rounded-xl border border-(--success)/30 bg-(--success-soft) px-4 py-3">
+          <div className="flex items-start gap-2">
+            <CheckCircle
+              size={16}
+              className="mt-0.5 shrink-0 text-(--success)"
+              aria-hidden="true"
+            />
+
+            <div>
+              <p className="text-sm font-medium text-(--foreground)">
+                Ya hiciste un pronóstico.
+              </p>
+              <p className="mt-0.5 text-xs text-(--muted)">
+                Solo se permite un voto por proposición.
+              </p>
             </div>
-          ) : (
-            <div className="flex items-center justify-between rounded-lg border border-(--border) bg-(--surface-secondary) px-4 py-2.5 text-sm">
-              <span className="text-(--foreground)">
-                Pronosticaste:{" "}
-                <span className="font-medium">
-                  {vote === "si" ? "sí va a pasar" : "no va a pasar"}
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setVote(null)}
-                className="text-xs text-(--accent) hover:underline"
-              >
-                cambiar
-              </button>
-            </div>
-          )}
+          </div>
+        </div>
+      )}
+
+      {isActive && item.isMine && (
+        <div className="mt-4 rounded-xl border border-(--accent)/30 bg-(--accent-soft) px-4 py-3">
+          <p className="text-sm font-medium text-(--foreground)">
+            Esta proposición es tuya.
+          </p>
+          <p className="mt-0.5 text-xs text-(--muted)">
+            No podés hacer pronósticos en una proposición que creaste o que es sobre vos.
+          </p>
         </div>
       )}
     </article>

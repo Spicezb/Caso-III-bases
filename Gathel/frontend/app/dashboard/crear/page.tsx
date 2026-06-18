@@ -15,23 +15,123 @@ import {
 } from "@heroui/react";
 import { Info, Bot } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import { createProposition } from "@/lib/gathel-api";
 
 export default function CrearProposicionPage() {
   const router = useRouter();
+
   const [target, setTarget] = useState<"otro" | "yo">("otro");
   const [mode, setMode] = useState<"puntos" | "dinero" | "ambos">("puntos");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage("");
 
-    // TODO: enviar al backend (REST API) -> POST /proposiciones
-    // El backend ejecuta el filtro de IA antes de publicarla
-    setTimeout(() => {
+    const formData = new FormData(e.currentTarget);
+
+    const storedPersonId = localStorage.getItem("personId");
+
+    if (!storedPersonId) {
+      setErrorMessage("No se encontró el usuario en sesión. Iniciá sesión otra vez.");
       setIsSubmitting(false);
-      router.push("/dashboard");
-    }, 800);
+      return;
+    }
+
+    const personId = Number(storedPersonId);
+
+    const targetPersonIdText = String(formData.get("targetPersonId") || "").trim();
+    const propositionText = String(formData.get("propositionText") || "").trim();
+    const deadline = String(formData.get("deadline") || "");
+
+    if (!propositionText) {
+      setErrorMessage("Debe escribir una proposición.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!deadline) {
+      setErrorMessage("Debe seleccionar una fecha límite.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    let finalTargetPersonId = personId;
+
+    if (target === "otro") {
+      if (!targetPersonIdText) {
+        setErrorMessage("Debe indicar el ID del jugador objetivo.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      finalTargetPersonId = Number(targetPersonIdText);
+
+      if (
+        Number.isNaN(finalTargetPersonId) ||
+        finalTargetPersonId <= 0 ||
+        !Number.isInteger(finalTargetPersonId)
+      ) {
+        setErrorMessage("El ID del jugador objetivo debe ser un número válido.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    const startPredictionDateTime = new Date().toISOString();
+    const endPredictionDateTime = new Date(deadline).toISOString();
+
+    if (new Date(endPredictionDateTime) <= new Date(startPredictionDateTime)) {
+      setErrorMessage("La fecha límite debe ser posterior al momento actual.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const title =
+      propositionText.length > 80
+        ? `${propositionText.slice(0, 80)}...`
+        : propositionText;
+
+    const descriptionParts = [
+      propositionText,
+      target === "otro"
+        ? `Persona objetivo ID: ${finalTargetPersonId}`
+        : "Persona objetivo: el creador",
+      `Modo de predicción: ${mode}`,
+    ];
+
+    try {
+      const response = await createProposition({
+        creatorPersonId: personId,
+        targetPersonId: finalTargetPersonId,
+        targetSocialAccountId: null,
+        title,
+        description: descriptionParts.join("\n"),
+        startPredictionDateTime,
+        endPredictionDateTime,
+        minimumEntryPointsAmount: mode === "dinero" ? null : 1,
+        winningProfitPercentage: 10,
+      });
+
+      const createdId =
+        response.propositionId ?? response.proposition?.propositionId;
+
+      if (createdId) {
+        router.push(`/dashboard/proposicion/${createdId}`);
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo crear la proposición."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -40,21 +140,23 @@ export default function CrearProposicionPage() {
         <span className="text-xs uppercase tracking-widest text-(--muted)">
           Nueva proposición
         </span>
+
         <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-(--foreground) sm:text-3xl">
           ¿Qué crees que va a pasar?
         </h1>
+
         <p className="mt-1 text-sm text-(--muted)">
           Describe un evento real y verificable. La comunidad podrá
           pronosticar si va a cumplirse o no.
         </p>
 
         <form className="mt-6 flex flex-col gap-6" onSubmit={handleSubmit}>
-          {/* Sobre quién */}
           <RadioGroup
             value={target}
             onChange={(v) => setTarget(v as "otro" | "yo")}
           >
             <Label>¿Sobre quién es esta proposición?</Label>
+
             <div className="mt-2 grid grid-cols-2 gap-2">
               <Radio value="otro">
                 <Radio.Content
@@ -67,12 +169,13 @@ export default function CrearProposicionPage() {
                   <Radio.Control>
                     <Radio.Indicator />
                   </Radio.Control>
+
                   <div className="leading-tight">
                     <Label className="text-sm font-medium text-(--foreground)">
                       Sobre otra persona
                     </Label>
                     <p className="text-xs text-(--muted)">
-                      Podrá aceptarla o rechazarla
+                      Usando el ID del jugador objetivo
                     </p>
                   </div>
                 </Radio.Content>
@@ -89,12 +192,13 @@ export default function CrearProposicionPage() {
                   <Radio.Control>
                     <Radio.Indicator />
                   </Radio.Control>
+
                   <div className="leading-tight">
                     <Label className="text-sm font-medium text-(--foreground)">
                       Sobre mí mismo/a
                     </Label>
                     <p className="text-xs text-(--muted)">
-                      Inicia activa de inmediato
+                      Se crea usando tu propio usuario
                     </p>
                   </div>
                 </Radio.Content>
@@ -102,16 +206,14 @@ export default function CrearProposicionPage() {
             </div>
           </RadioGroup>
 
-          {/* Persona objetivo (solo si es "otro") */}
           {target === "otro" && (
-            <TextField name="targetUser" type="text" isRequired>
-              <Label>Usuario de la persona</Label>
-              <Input placeholder="@eliruns" />
+            <TextField name="targetPersonId" type="number" isRequired>
+              <Label>ID del jugador objetivo</Label>
+              <Input placeholder="Ej: 1022" />
               <FieldError />
             </TextField>
           )}
 
-          {/* Texto de la proposición */}
           <TextField name="propositionText" isRequired maxLength={240}>
             <Label>Proposición</Label>
             <TextArea
@@ -121,12 +223,12 @@ export default function CrearProposicionPage() {
             <FieldError />
           </TextField>
 
-          {/* Modo de predicción */}
           <RadioGroup
             value={mode}
             onChange={(v) => setMode(v as "puntos" | "dinero" | "ambos")}
           >
             <Label>¿Con qué se puede pronosticar?</Label>
+
             <div className="mt-2 grid grid-cols-3 gap-2">
               {[
                 { value: "puntos", label: "Puntos" },
@@ -144,6 +246,7 @@ export default function CrearProposicionPage() {
                     <Radio.Control>
                       <Radio.Indicator />
                     </Radio.Control>
+
                     <Label className="text-sm text-(--foreground)">
                       {opt.label}
                     </Label>
@@ -153,32 +256,45 @@ export default function CrearProposicionPage() {
             </div>
           </RadioGroup>
 
-          {/* Fecha límite */}
           <TextField name="deadline" type="datetime-local" isRequired>
             <Label>Fecha y hora límite para predicciones</Label>
             <Input />
             <FieldError />
           </TextField>
 
-          {/* Aviso de filtro de IA */}
           <div className="flex items-start gap-3 rounded-xl border border-(--border) bg-(--surface-secondary) p-4">
-            <Bot size={18} className="mt-0.5 shrink-0 text-(--accent)" aria-hidden="true" />
+            <Bot
+              size={18}
+              className="mt-0.5 shrink-0 text-(--accent)"
+              aria-hidden="true"
+            />
+
             <p className="text-sm text-(--muted)">
-              Antes de publicarse, esta proposición pasará por un filtro de
-              IA que bloquea contenido ilegal, violento, sexual,
-              discriminatorio o que viole las reglas de la plataforma.
+              Antes de publicarse, esta proposición pasará por un filtro de IA
+              que bloquea contenido ilegal, violento, sexual, discriminatorio o
+              que viole las reglas de la plataforma.
             </p>
           </div>
 
           {target === "otro" && (
             <div className="flex items-start gap-3 rounded-xl border border-(--border) bg-(--surface-secondary) p-4">
-              <Info size={18} className="mt-0.5 shrink-0 text-(--accent)" aria-hidden="true" />
+              <Info
+                size={18}
+                className="mt-0.5 shrink-0 text-(--accent)"
+                aria-hidden="true"
+              />
+
               <p className="text-sm text-(--muted)">
-                La persona involucrada podrá rechazar esta proposición si la
-                considera ofensiva, invasiva o inaceptable. Si la acepta,
-                definirá la fecha límite final y activará el concurso.
+                Por ahora, para el MVP, se usa el ID del jugador objetivo. Más
+                adelante se puede cambiar por búsqueda usando @username.
               </p>
             </div>
+          )}
+
+          {errorMessage && (
+            <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {errorMessage}
+            </p>
           )}
 
           <Checkbox name="confirm" isRequired>
@@ -186,11 +302,13 @@ export default function CrearProposicionPage() {
               <Checkbox.Control>
                 <Checkbox.Indicator />
               </Checkbox.Control>
+
               <Label className="text-sm text-(--muted)">
                 Confirmo que esta proposición describe un evento real y
                 verificable.
               </Label>
             </Checkbox.Content>
+
             <FieldError />
           </Checkbox>
 
@@ -203,6 +321,7 @@ export default function CrearProposicionPage() {
             >
               Cancelar
             </Button>
+
             <Button
               type="submit"
               variant="primary"

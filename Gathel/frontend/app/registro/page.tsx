@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Checkbox,
@@ -13,18 +14,65 @@ import {
 } from "@heroui/react";
 import { Eye, EyeOff } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import { register } from "@/lib/gathel-api";
 
 export default function RegistroPage() {
+  const router = useRouter();
+
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage("");
 
-    // TODO: conectar con el endpoint de registro del backend (REST API)
-    // const formData = new FormData(e.currentTarget);
-    setTimeout(() => setIsSubmitting(false), 800);
+    const formData = new FormData(e.currentTarget);
+
+    const fullName = String(formData.get("name") || "").trim();
+    const username = String(formData.get("username") || "").trim();
+    const email = String(formData.get("email") || "").trim();
+    const password = String(formData.get("password") || "");
+
+    const [firstName, ...rest] = fullName.split(" ");
+    const lastName = rest.join(" ");
+
+    if (!firstName || !username || !email || !password) {
+      setErrorMessage("Debe completar todos los campos obligatorios.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (password.length < 8) {
+      setErrorMessage("La contraseña debe tener al menos 8 caracteres.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const response = await register({
+        name: firstName,
+        lastName,
+        username,
+        email,
+        password,
+      });
+
+      localStorage.setItem("personId", String(response.person.personId));
+      localStorage.setItem("username", response.person.username);
+      localStorage.setItem("email", response.person.email);
+
+      router.push("/dashboard");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo crear la cuenta."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -52,7 +100,12 @@ export default function RegistroPage() {
           <FieldError />
         </TextField>
 
-        <TextField name="password" type={showPassword ? "text" : "password"} isRequired minLength={8}>
+        <TextField
+          name="password"
+          type={showPassword ? "text" : "password"}
+          isRequired
+          minLength={8}
+        >
           <Label>Contraseña</Label>
           <div className="relative">
             <Input placeholder="Mínimo 8 caracteres" className="pr-10" />
@@ -69,6 +122,12 @@ export default function RegistroPage() {
           </div>
           <FieldError />
         </TextField>
+
+        {errorMessage && (
+          <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {errorMessage}
+          </p>
+        )}
 
         <Checkbox name="acceptTerms" isRequired>
           <Checkbox.Content>
@@ -106,13 +165,22 @@ export default function RegistroPage() {
       <div className="flex flex-col gap-3">
         <button
           type="button"
-          className={buttonVariants({ variant: "outline", size: "lg", fullWidth: true })}
+          className={buttonVariants({
+            variant: "outline",
+            size: "lg",
+            fullWidth: true,
+          })}
         >
           Continuar con Instagram
         </button>
+
         <button
           type="button"
-          className={buttonVariants({ variant: "outline", size: "lg", fullWidth: true })}
+          className={buttonVariants({
+            variant: "outline",
+            size: "lg",
+            fullWidth: true,
+          })}
         >
           Continuar con TikTok
         </button>
