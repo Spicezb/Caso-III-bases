@@ -634,3 +634,25 @@ UNIQUE(propositionId, personId)
 * createdAt timestamp (DEFAULT CURRENT_TIMESTAMP)
 * updatedAt timestamp (DEFAULT CURRENT_TIMESTAMP)
 * isDeleted BOOLEAN (DEFAULT FALSE)
+
+## followRequests
+
+* followRequestId SERIAL PK
+* senderPersonId INT FK people UNIQUE
+* receiverPersonId INT FK people UNIQUE
+* statusTypeId INT FK statusTypes
+* requestDate timestamp (DEFAULT GETDATE())
+* responseDate timestamp NULL
+* createdAt timestamp (DEFAULT GETDATE())
+* updatedAt timestamp (DEFAULT GETDATE())
+* isDeleted BOOLEAN (DEFAULT 0)
+
+## follows
+
+* followId SERIAL PK
+* followerPersonId INT FK people UNIQUE
+* followedPersonId INT FK people UNIQUE
+* followDate timestamp (DEFAULT GETDATE())
+* createdAt timestamp (DEFAULT GETDATE())
+* updatedAt timestamp (DEFAULT GETDATE())
+* isDeleted BOOLEAN (DEFAULT 0)
