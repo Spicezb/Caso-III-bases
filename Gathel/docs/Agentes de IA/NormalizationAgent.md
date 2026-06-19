@@ -138,7 +138,6 @@ Ordena desde lo más urgente hasta lo menos urgente.
 Correcciones IA:
 
 1. Duplicación potencial de catálogos de estados
-Problema    Done
 
 Existen:
 
@@ -157,26 +156,7 @@ Cancelled
 
 en múltiples tablas.
 
-Genera mantenimiento duplicado.
-
 Solución
-
-Tomar una decisión arquitectónica.
-
-Opción A
-
-Mantener:
-
-propositionStatuses
-predictionStatuses
-
-y eliminar:
-
-statusTypes
-
-si no aporta valor.
-
-Opción B  <------------------------------------- Esta
 
 Crear un catálogo único:
 
@@ -187,14 +167,13 @@ con categorías.
 --------------------------------------------------------------------------------------------
 
 2. transactionTypes y walletTransactionTypes podrían representar lo mismo
-Problema                 Done
 
 Existen dos catálogos:
 
 walletTransactionTypes
 transactionTypes
 
-Riesgo
+Riesgo:
 
 Duplicar conceptos.
 
@@ -206,24 +185,13 @@ Transfer
 
 en ambos catálogos.
 
-Solución
+Solución:
 
-Definir claramente:
-
-transactionTypes
-
-Dinero real.
-
-walletTransactionTypes
-
-Puntos virtuales.
-
-Si terminan teniendo los mismos registros, fusionarlos.
+fusionarlos
 
 --------------------------------------------------------------------------------------------
 
 3. Restricciones UNIQUE faltantes
-Problema Done
 
 Algunos catálogos permiten duplicados.
 
@@ -232,7 +200,8 @@ Ejemplo:
 USD
 USD
 USD
-Solución
+
+Solución:
 
 Agregar:
 

@@ -148,19 +148,8 @@ Ordena desde lo más urgente hasta lo menos urgente.
 Correcciones IA:
 
 Problema 1: No existe bloqueo/reserva explícita de fondos
-Estado      Done
 
-Confirmado.
-
-Por qué me preocupa
-
-Actualmente veo:
-
-predictions
-walletTransactions
-financialMovements
-
-pero no existe una estructura que represente:
+No existe una estructura que represente:
 
 Disponible
 Bloqueado
@@ -169,82 +158,58 @@ Consumido
 
 durante el ciclo de vida de una predicción.
 
-Riesgo
+Riesgo:
 
 Doble gasto.
 
-Solución
+Solución:
 
 Agregar un concepto formal de reserva de fondos.
 
-Puede ser:
-
 walletReservations
-
-o un ledger con estados.
-
-Prioridad
-
-Crítica.
 
 --------------------------------------------------------------------------------------------
 
 Problema 2: No existe trazabilidad explícita de distribución de premios
-Estado Done
 
-Confirmado.
-
-Por qué me preocupa
-
-Veo:
-
-isWinner
-
-pero no veo:
+No existe:
 
 winningPayout
 
 ni una tabla equivalente.
 
-Riesgo
+Riesgo:
 
-No podés reconstruir:
+No se pueden reconstruir los pagos de las predicciones.
 
-Quién recibió cuánto.
-Solución
+Solución:
 
 Crear una tabla tipo:
 
 predictionPayouts
-(
-    predictionPayoutId,
-    predictionId,
-    walletTransactionId,
-    payoutAmount,
-    commissionAmount,
-    executedAt
-)
+
+predictionPayoutId,
+predictionId,
+walletTransactionId,
+payoutAmount,
+commissionAmount,
+executedAt
 
 --------------------------------------------------------------------------------------------
 
 Problema 3: transactionAttempts y transactions necesitan vínculo obligatorio
-Estado Done
-
-Confirmado.
-
-Por qué me preocupa
 
 Actualmente parecen independientes.
 
-Riesgo
+Riesgo:
 
-No podés reconstruir:
+No se puede reconstruir:
 
 Intento → pago exitoso
 
 de forma segura.
 
-Solución
+Solución:
 
 Agregar:
 

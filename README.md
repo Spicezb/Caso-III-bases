@@ -154,7 +154,15 @@ Caso-III-bases/
 
 ## Agentes Implementados
 
-Los agentes utilizados para la revisión de la base de datos fueron... Se ponen los agentes
+Los agentes utilizados para la revisión de la base de datos fueron:
+
+financial, normalization, scalability y security
+
+Estos agentes fueron utilizados en ChatGPT, los archivos de estos contienen las instrucciones relacionadas a cada área, por ejemplo, el de security tiene la instrucción de revisar solamente aspectos relacionados a la seguridad del sistema.
+
+Cada agente revisó el diseño de la base de datos en cuanto al área requerida, y detectó posibles problemas o recomendaciones que mejorarían el proyecto. Estos cambios fueron aplicados en el diseño.
+
+Las respuestas/recomendaciones brindadas por los agentes pueden ser revisadas en la carpeta de docs dentro del proyecto Gathel.
 
 ## Tecnologías utilizadas
 
