@@ -32,12 +32,12 @@ La documentación del proyecto se organiza en las siguientes áreas:
 
 Archivos principales:
 
-* [Diseño de tablas](BDDdesign/tablas_gathel.md)
-* [Investigación de Flyway](docs/flywayResearch.md)
-* [Agentes de IA](docs/Agentes%20de%20IA/)
-* [Migraciones Flyway](flyway/sql/)
-* [Backend](backend/Gathel.Api/)
-* [Frontend](frontend/)
+* [Diseño de tablas](Gathel/BDDdesign/tablas_gathel.md)
+* [Investigación de Flyway](Gathel/docs/flywayResearch.md)
+* [Agentes de IA](Gathel/docs/Agentes%20de%20IA/)
+* [Migraciones Flyway](Gathel/flyway/sql/)
+* [Backend](Gathel/backend/Gathel.Api/)
+* [Frontend](Gathel/frontend/)
 
 ## Alcance del MVP
 
