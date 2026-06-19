@@ -32,7 +32,28 @@ La documentación se divide en cuatro áreas principales:
 
 ## Alcance del MVP
 
-Por definir... En general funcionalidades básicas del sitio web y lo más complejo se trabajará por medio de SP o scripts (esta parte meramente simulativa).
+El MVP de Gathel implementa las funcionalidades principales necesarias para demostrar el flujo básico del juego.
+
+Funcionalidades implementadas:
+
+* Login y logout básico.
+* Visualización del balance de puntos.
+* Visualización del balance de dinero real.
+* Visualización de actividad básica del jugador en la pantalla principal.
+* Creación de proposiciones para otro jugador.
+* Creación de proposiciones sobre sí mismo.
+* Creación de Gathel padre y proposiciones hijas candidatas.
+* Votación por propuestas candidatas.
+* Selección de propuesta ganadora mediante Stored Procedure.
+* Pantalla de pendientes para que la persona objetivo acepte o rechace la propuesta ganadora.
+* Activación de proposiciones aceptadas.
+* Visualización de proposiciones activas disponibles para pronosticar.
+* Realización de pronósticos utilizando puntos o dinero real.
+* Visualización de resultados e historial de pronósticos.
+
+El flujo avanzado del juego, como selección automática después de 24 horas, cierre de eventos, validación final de resultados, distribución de ganancias y penalizaciones, puede ejecutarse mediante Stored Procedures o scripts SQL directamente en la base de datos.
+
+La integración real con redes sociales e inteligencia artificial no forma parte del MVP funcional. Para efectos de demostración, los eventos externos se representan mediante proposiciones creadas manualmente dentro de la plataforma.
 
 ## Estructura del Repositorio
 
@@ -92,15 +113,17 @@ Los agentes utilizados para la revisión de la base de datos fueron... Se ponen 
 
 ## Tecnologías utilizadas
 
-| Área | Tecnología |
-|---|---|
-| Base de datos | SQL Server |
-| Migraciones | Flyway |
-| Backend | Por definir... |
-| Frontend | Por definir... |
-| Contenedores | Docker / Docker Compose |
-| Diagramas | Diagramador de SQL server |
-| Control de versiones | Git / GitHub |
+| Área                 | Tecnología                           |
+| -------------------- | ------------------------------------ |
+| Base de datos        | SQL Server                           |
+| Migraciones          | Flyway                               |
+| Backend              | C# / ASP.NET Core Web API            |
+| ORM                  | Entity Framework Core                |
+| Frontend             | Next.js / React / TypeScript         |
+| Interfaz             | Tailwind CSS / HeroUI / Lucide React |
+| Contenedores         | Docker / Docker Compose              |
+| Diagramas            | Diagramador de SQL Server / DBML     |
+| Control de versiones | Git / GitHub                         |
 
 ## Migraciones Flyway
 
@@ -140,7 +163,8 @@ Actualmente se configuró SQL Server y Flyway mediante contenedores.
 * Docker Desktop.
 * SQL Server Management Studio.
 * Visual Studio Code o editor equivalente.
-* Node.js LTS, cuando se implemente el frontend o backend.
+* Node.js LTS.
+* .NET SDK.
 
 No es necesario instalar Flyway manualmente, ya que se ejecuta mediante Docker Compose.
 
@@ -173,39 +197,129 @@ Contraseña: Gathel123!
 Luego ejecutar:
 
 ```sql
-USE GathelDB;
+USE GathelDB o master; 
 GO
 
 SELECT *
 FROM flyway_schema_history;
 GO
 ```
+### Levantar backend
 
+Desde la carpeta del backend:
+
+```bash
+cd Gathel/backend/Gathel.Api
+dotnet run
+```
+El backend se ejecuta en http://localhost:5145
+
+### Levantar frontend
+
+```bash
+cd Gathel/frontend
+npm install
+npm run dev
+```
+Se accede a este con: http://localhost:3000
+
+### 5. Cambiá “Estado actual del proyecto” por esto
+
+:::writing{variant="document" id="83524"}
 ## Estado actual del proyecto
 
 | Fase                                     | Estado      |
 | ---------------------------------------- | ----------- |
-| Repositorio inicial                      | En progreso |
-| README inicial                           | En progreso |
+| Repositorio inicial                      | Completado |
+| README inicial                           | En actualización |
 | Docker Compose con SQL Server            | Configurado |
 | Flyway mediante Docker Compose           | Configurado |
-| Configuración `flyway.conf`              | En progreso |
-| Scripts SQL definitivos                  | Pendiente   |
-| Seeding inicial                          | Pendiente   |
-| Especificación Markdown de base de datos | Pendiente   |
-| DBML                                     | Pendiente   |
-| Diagrama PDF                             | Pendiente   |
-| Backend MVP                              | Pendiente   |
-| Frontend MVP                             | Pendiente   |
+| Configuración `flyway.conf`              | Configurado |
+| Scripts SQL principales                  | Implementado |
+| Stored Procedures principales            | Implementado |
+| Seeding inicial                          | Implementado / en ajuste |
+| Especificación Markdown de base de datos | Completado |
+| DBML                                     | Completado |
+| Diagrama PDF                             | Completado |
+| Backend MVP                              | Implementado |
+| Frontend MVP                             | Implementado |
+| REST API                                 | Implementado |
+| Login y logout                           | Implementado |
+| Dashboard con balance de puntos y dinero | Implementado |
+| Creación de proposiciones                | Implementado |
+| Votación de propuestas candidatas        | Implementado |
+| Aceptación o rechazo por persona objetivo | Implementado |
+| Pronósticos con puntos o dinero real     | Implementado |
+| Pantalla de resultados                   | Implementado |
+| Scripts SQL de apoyo para demostración   | En progreso |
+:::
 
 
-### Requisitos previos
+## Flujo principal implementado en el MVP
 
-- Git
-- Docker Desktop
-- SQL Server Management Studio
-- Por definir... La parte del frontend 
+El flujo principal del MVP funciona de la siguiente manera:
+
+```md
+1. Un usuario inicia sesión en Gathel.
+2. El usuario visualiza su balance de puntos, balance de dinero real y actividad básica.
+3. El usuario puede crear un Gathel para sí mismo o para otro jugador.
+4. Otros usuarios pueden agregar propuestas candidatas relacionadas con ese Gathel.
+5. Los jugadores votan por la propuesta candidata que consideran más interesante o probable.
+6. Después de 24 horas, se puede ejecutar un Stored Procedure para seleccionar la propuesta ganadora.
+7. La propuesta ganadora pasa al estado `PendingApproval`.
+8. La persona objetivo puede aceptar o rechazar la propuesta desde la pantalla de pendientes.
+9. Si la rechaza, la proposición se cierra y no se habilitan predicciones.
+10. Si la acepta, define las fechas de predicción y la proposición pasa al estado `Active`.
+11. Otros jugadores pueden realizar pronósticos utilizando puntos o dinero real.
+12. Los resultados e historial de pronósticos pueden visualizarse desde la pantalla de resultados.
+
+Algunos pasos internos del flujo se ejecutan mediante Stored Procedures o scripts SQL, lo cual se mantiene dentro del alcance permitido para el MVP.
+```
 
 ### Levantar servicios
 
-Por definir... Como se va a levantar el proyecto
+Para ejecutar el proyecto completo se deben levantar primero los servicios de base de datos, aplicar las migraciones y luego iniciar backend y frontend.
+
+#### 1. Levantar SQL Server
+
+1, Desde la raíz del proyecto, donde se encuentra el archivo `docker-compose.yml`:
+
+```bash
+docker compose up -d sqlserver
+```
+
+2. Luego migraciones de flyway: 
+```bash
+docker compose run --rm flyway
+```
+3. Desde SQL server conectarse con estos datos:
+
+Servidor: localhost,1433
+Usuario: sa
+Contraseña: Gathel123!
+
+Y si se quiere se puede revisar el historial de flyway con: 
+```sql
+USE Gathel;
+GO
+
+SELECT *
+FROM flyway_schema_history;
+GO
+```
+4. Luego levantamos el backend así:
+```bash
+cd Gathel/backend/Gathel.Api
+dotnet run
+```
+
+5. Por ultimo el frontend (nos quedó confuso xd):
+
+Asegurarse crear el archivo .env.local con esto: NEXT_PUBLIC_API_URL=http://localhost:5145 en la carpeta especifica de Gathel/frontend/.env.local
+
+```bash
+cd Gathel/frontend
+npm install
+npm run dev
+```
+Y ya luego se abre el enlace a la web: http://localhost:3000
