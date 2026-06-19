@@ -1,6 +1,7 @@
-/*
-    V21__frontend_demo_data.sql
+USE GathelDB
+go
 
+/*
     Datos de demostración para que el frontend de Gathel se vea completo:
     - 3 usuarios reales.
     - Contraseña de todos: 12345678.
@@ -1229,7 +1230,7 @@ BEGIN
         DATEADD(HOUR, -48, SYSDATETIME()),
         DATEADD(DAY, 3, SYSDATETIME()),
         NULL,
-        5,
+        1,
         15,
         1,
         DATEADD(DAY, -2, SYSDATETIME()),
@@ -1332,7 +1333,7 @@ BEGIN
         DATEADD(DAY, -15, SYSDATETIME()),
         DATEADD(DAY, -7, SYSDATETIME()),
         1,
-        10,
+        1,
         10,
         1,
         DATEADD(DAY, -15, SYSDATETIME()),
@@ -1573,7 +1574,7 @@ BEGIN
         @activeElizabethId,
         @johnId,
         1,
-        10,
+        1,
         5,
         @usdCurrencyId,
         @usdExchangeRateId,
@@ -1655,7 +1656,7 @@ BEGIN
         @closedKarinaId,
         @johnId,
         1,
-        15,
+        1,
         0,
         @usdCurrencyId,
         @usdExchangeRateId,
@@ -1737,7 +1738,7 @@ BEGIN
         @closedKarinaId,
         @elizabethId,
         0,
-        12,
+        1,
         0,
         @usdCurrencyId,
         @usdExchangeRateId,
@@ -1980,9 +1981,171 @@ BEGIN
     );
 END;
 
+IF NOT EXISTS (SELECT 1 FROM dbo.propositions WHERE title = 'Karina rechazó una propuesta invasiva sobre su rutina')
+BEGIN
+    INSERT INTO dbo.propositions
+    (
+        parentproposition,
+        statusTypesId,
+        creatorPersonId,
+        targetPersonId,
+        targetSocialAccountId,
+        title,
+        description,
+        startPredictionDateTime,
+        endPredictionDateTime,
+        winningOption,
+        minimumEntryPointsAmount,
+        winningProfitPercentage,
+        isPublic,
+        createdAt,
+        updatedAt,
+        isDeleted
+    )
+    VALUES
+    (
+        NULL,
+        (
+            SELECT TOP 1 statusTypeId
+            FROM dbo.statusTypes
+            WHERE name = 'Rejected'
+        ),
+        @johnId,
+        @karinaId,
+        @socialKarina,
+        'Karina rechazó una propuesta invasiva sobre su rutina',
+        'Proposición rechazada por la persona objetivo. Se conserva como ejemplo de control de integridad y consentimiento.',
+        DATEADD(DAY, -6, SYSDATETIME()),
+        DATEADD(DAY, -5, SYSDATETIME()),
+        NULL,
+        1,
+        10,
+        1,
+        DATEADD(DAY, -6, SYSDATETIME()),
+        SYSDATETIME(),
+        0
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM dbo.notifications
+    WHERE personId = @karinaId
+      AND title = 'Penalización aplicada'
+)
+BEGIN
+    INSERT INTO dbo.notifications
+    (
+        notificationTypeId,
+        personId,
+        title,
+        message,
+        isRead,
+        readAt,
+        referenceTypeId,
+        referenceId,
+        createdAt,
+        updatedAt,
+        isDeleted
+    )
+    VALUES
+    (
+        @ntPenalty,
+        @karinaId,
+        'Penalización aplicada',
+        'Se aplicó una penalización de 1 punto por rechazar una proposición ganadora.',
+        0,
+        NULL,
+        @refPropositionId,
+        @pendingParentId,
+        DATEADD(DAY, -1, SYSDATETIME()),
+        SYSDATETIME(),
+        0
+    );
+END;
 
 /* ============================================================
-   12. VERIFICACIÓN RÁPIDA
+   12. CORRECCIÓN FINAL DE PUNTOS PARA FRONTEND
+
+   Regla del MVP:
+   - Si la predicción usa puntos, pointsAmount debe ser 1.
+   - Si la predicción es solo de dinero, pointsAmount debe ser 0.
+   - Si la predicción es mixta, pointsAmount debe ser 1 y moneyAmount > 0.
+
+   Esto corrige datos ya existentes aunque los INSERT no se ejecuten
+   por los IF NOT EXISTS.
+============================================================ */
+
+UPDATE dbo.propositions
+SET minimumEntryPointsAmount = 1,
+    updatedAt = SYSDATETIME()
+WHERE title IN
+(
+    'Elizabeth publicó que está entrenando para una maratón',
+    'John anunció que va a participar en un torneo de ajedrez',
+    'Elizabeth no asistirá a la maratón',
+    'Elizabeth terminará dentro de los primeros 30 lugares',
+    'Elizabeth logrará al menos el décimo lugar',
+    'John llegará a semifinales del torneo',
+    'John perderá en la primera ronda',
+    'Karina anunció que intentará subir contenido fitness durante 7 días',
+    'Karina publicará contenido fitness todos los días de esta semana',
+    'Elizabeth completará la maratón en menos de 5 horas',
+    'Karina subió al menos tres videos fitness en una semana',
+    'Karina rechazó una propuesta invasiva sobre su rutina'
+);
+
+UPDATE dbo.propositions
+SET minimumEntryPointsAmount = NULL,
+    updatedAt = SYSDATETIME()
+WHERE title IN
+(
+    'John ganará al menos dos partidas del torneo',
+    'Elizabeth corrió más de 10 km el domingo'
+);
+
+UPDATE dbo.predictions
+SET pointsAmount = 1,
+    updatedAt = SYSDATETIME()
+WHERE propositionId IN
+(
+    SELECT propositionId
+    FROM dbo.propositions
+    WHERE title IN
+    (
+        'Elizabeth completará la maratón en menos de 5 horas',
+        'Karina subió al menos tres videos fitness en una semana'
+    )
+)
+AND moneyAmount = 0;
+
+UPDATE dbo.predictions
+SET pointsAmount = 1,
+    updatedAt = SYSDATETIME()
+WHERE propositionId IN
+(
+    SELECT propositionId
+    FROM dbo.propositions
+    WHERE title = 'Elizabeth completará la maratón en menos de 5 horas'
+)
+AND moneyAmount > 0;
+
+UPDATE dbo.predictions
+SET pointsAmount = 0,
+    updatedAt = SYSDATETIME()
+WHERE propositionId IN
+(
+    SELECT propositionId
+    FROM dbo.propositions
+    WHERE title IN
+    (
+        'John ganará al menos dos partidas del torneo',
+        'Elizabeth corrió más de 10 km el domingo'
+    )
+);
+
+/* ============================================================
+   13. VERIFICACIÓN RÁPIDA
 ============================================================ */
 
 SELECT
