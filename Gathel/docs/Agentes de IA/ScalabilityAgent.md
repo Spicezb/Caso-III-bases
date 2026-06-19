@@ -134,34 +134,17 @@ Correcciones IA:
 --------------------------------------------------------------------------------------------
 
 Problema 1: No existe estructura para resultados de IA
-Área afectada      Done    
-
-Validación automática.
-
-Problema
 
 El contexto del sistema menciona validaciones automáticas, pero no existe una entidad para almacenar resultados de IA.
 
-Impacto
-
-La información terminará dispersa o incrustada en otras tablas.
-
-Escenario donde fallaría
-
-Cuando aumente el volumen de validaciones automáticas.
-
-Solución
+Solución:
 
 Crear una tabla dedicada:
 
 aiValidationResults
-(
-    validationId
-    propositionId
-    statusid
-    comments
-    executionDateTime
-)
-Prioridad
 
-Alta
+validationId
+propositionId
+statusid
+comments
+executionDateTime

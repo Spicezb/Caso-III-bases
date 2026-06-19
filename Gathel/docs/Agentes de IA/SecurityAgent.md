@@ -119,12 +119,7 @@ Correcciones IA:
 
 --------------------------------------------------------------------------------------------
 
-Problema 7: No existe auditoría específica para eventos de seguridad
-Área afectada       
-
-Autenticación.
-
-Problema
+Problema 1: No existe auditoría específica para eventos de seguridad
 
 No existe una entidad para registrar:
 
@@ -138,18 +133,13 @@ Impacto
 
 Poca trazabilidad de ataques o actividad sospechosa.
 
-Solución
+Solución:
 
-Agregar:
+Agregar
 
 securityEvents
-
-con:
 
 personId
 eventType
 userAgent
 eventDateTime
-Prioridad
-
-Alta
