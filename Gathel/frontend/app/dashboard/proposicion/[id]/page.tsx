@@ -4,21 +4,32 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { Avatar, Chip, buttonVariants } from "@heroui/react";
 import {
+  AlertCircle,
   ArrowLeft,
-  Users,
-  TrendingUp,
-  TrendingDown,
   CheckCircle,
+  Clock,
   Image as ImageIcon,
+  Lightbulb,
+  Plus,
+  TrendingDown,
+  TrendingUp,
+  Users,
+  Vote,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import {
+  createProposition,
+  getMyVotingVotes,
   getPredictionsByProposition,
   getPropositionById,
+  getVotingPropositions,
+  voteForCandidateProposition,
 } from "@/lib/gathel-api";
 import type {
   PredictionResponse,
   PropositionResponse,
+  VotingCandidateResponse,
+  VotingPropositionGroupResponse,
 } from "@/lib/gathel-api";
 
 type Prediction = {
@@ -38,12 +49,9 @@ type PropositionDetail = {
   subject: string;
   subjectHandle: string;
   text: string;
-  status: "activa" | "cumplida" | "no cumplida";
+  status: "activa" | "cumplida" | "no cumplida" | "votacion" | "pendiente";
   mode: "puntos" | "dinero" | "ambos";
-  probability: number;
   pool: string;
-  yesMultiplier: number;
-  noMultiplier: number;
   timeLeft: string;
   deadline: string;
   votes: number;
@@ -53,6 +61,7 @@ type PropositionDetail = {
   predictions: Prediction[];
   creatorPersonId: number;
   targetPersonId: number;
+  parentProposition: number | null;
 };
 
 function statusChip(status: PropositionDetail["status"]) {
@@ -68,6 +77,22 @@ function statusChip(status: PropositionDetail["status"]) {
     return (
       <Chip color="danger" variant="soft" size="sm">
         <Chip.Label>no cumplida</Chip.Label>
+      </Chip>
+    );
+  }
+
+  if (status === "votacion") {
+    return (
+      <Chip color="accent" variant="soft" size="sm">
+        <Chip.Label>en votación</Chip.Label>
+      </Chip>
+    );
+  }
+
+  if (status === "pendiente") {
+    return (
+      <Chip color="warning" variant="soft" size="sm">
+        <Chip.Label>pendiente</Chip.Label>
       </Chip>
     );
   }
@@ -99,6 +124,9 @@ function normalizeStatus(
 ): PropositionDetail["status"] {
   const value = (status ?? "").toLowerCase();
 
+  if (value.includes("voting")) return "votacion";
+  if (value.includes("pendingapproval")) return "pendiente";
+  if (value.includes("pending")) return "pendiente";
   if (value.includes("no")) return "no cumplida";
   if (value.includes("cumpl")) return "cumplida";
 
@@ -174,7 +202,7 @@ function formatPredictionTime(dateText: string) {
   return `Hace ${diffDays} días`;
 }
 
-function calculateProbability(predictions: Prediction[]) {
+function calculateCommunitySplit(predictions: Prediction[]) {
   if (predictions.length === 0) {
     return 50;
   }
@@ -184,35 +212,14 @@ function calculateProbability(predictions: Prediction[]) {
   return Math.round((yesVotes / predictions.length) * 100);
 }
 
-function calculateMultiplier(probability: number) {
-  const safeProbability = Math.max(probability, 5);
-
-  return Number((100 / safeProbability).toFixed(2));
-}
-
-function calculateMultipliers(probability: number) {
-  const yesProbability = probability;
-  const noProbability = 100 - probability;
-
-  return {
-    yesMultiplier: calculateMultiplier(yesProbability),
-    noMultiplier: calculateMultiplier(noProbability),
-  };
-}
-
 function calculatePool(
   predictions: Prediction[],
   fallbackPoints: number | null,
   mode: PropositionDetail["mode"]
 ) {
   if (predictions.length === 0) {
-    if (mode === "dinero") {
-      return "$0.00";
-    }
-
-    if (mode === "ambos") {
-      return `${fallbackPoints ?? 1} pts · $0.00`;
-    }
+    if (mode === "dinero") return "$0.00";
+    if (mode === "ambos") return `${fallbackPoints ?? 1} pts · $0.00`;
 
     return `${fallbackPoints ?? 1} pts`;
   }
@@ -232,13 +239,8 @@ function calculatePool(
     }
   });
 
-  if (mode === "dinero") {
-    return `$${totalMoney.toFixed(2)}`;
-  }
-
-  if (mode === "ambos") {
-    return `${totalPoints} pts · $${totalMoney.toFixed(2)}`;
-  }
+  if (mode === "dinero") return `$${totalMoney.toFixed(2)}`;
+  if (mode === "ambos") return `${totalPoints} pts · $${totalMoney.toFixed(2)}`;
 
   return `${totalPoints} pts`;
 }
@@ -281,17 +283,9 @@ function detectPropositionMode(
 ): PropositionDetail["mode"] {
   const text = `${p.title ?? ""} ${p.description ?? ""}`.toLowerCase();
 
-  if (text.includes("modo de predicción: dinero")) {
-    return "dinero";
-  }
-
-  if (text.includes("modo de predicción: ambos")) {
-    return "ambos";
-  }
-
-  if (text.includes("modo de predicción: puntos")) {
-    return "puntos";
-  }
+  if (text.includes("modo de predicción: dinero")) return "dinero";
+  if (text.includes("modo de predicción: ambos")) return "ambos";
+  if (text.includes("modo de predicción: puntos")) return "puntos";
 
   return detectMode(predictions);
 }
@@ -301,8 +295,6 @@ function mapPropositionToDetail(
   predictions: Prediction[]
 ): PropositionDetail {
   const mode = detectPropositionMode(p, predictions);
-  const probability = calculateProbability(predictions);
-  const multipliers = calculateMultipliers(probability);
 
   return {
     id: String(p.propositionId),
@@ -313,10 +305,7 @@ function mapPropositionToDetail(
     text: p.title || p.description || "Proposición sin título",
     status: normalizeStatus(p.status),
     mode,
-    probability,
-    pool: calculatePool(predictions, p.minimumEntryPointsAmount, mode),
-    yesMultiplier: multipliers.yesMultiplier,
-    noMultiplier: multipliers.noMultiplier,
+    pool: calculatePool(predictions, p.minimumEntryPointsAmount ?? null, mode),
     timeLeft: getTimeLeft(p.endPredictionDateTime),
     deadline: formatDeadline(p.endPredictionDateTime),
     votes: predictions.length,
@@ -326,7 +315,241 @@ function mapPropositionToDetail(
     predictions,
     creatorPersonId: p.creatorPersonId,
     targetPersonId: p.targetPersonId,
+    parentProposition: p.parentProposition ?? null,
   };
+}
+
+function buildTitle(text: string, maxLength = 90) {
+  const cleanText = text.trim();
+
+  if (cleanText.length <= maxLength) {
+    return cleanText;
+  }
+
+  return `${cleanText.slice(0, maxLength)}...`;
+}
+
+type VotingBoxProps = {
+  group: VotingPropositionGroupResponse;
+  selectedCandidate?: VotingCandidateResponse | null;
+  votedCandidateIds: number[];
+  votedParentIds: number[];
+  isVotingId: number | null;
+  isAddingCandidate: boolean;
+  candidateText: string;
+  candidateDescription: string;
+  onCandidateTextChange: (value: string) => void;
+  onCandidateDescriptionChange: (value: string) => void;
+  onVote: (candidatePropositionId: number, parentPropositionId: number) => void;
+  onAddCandidate: (group: VotingPropositionGroupResponse) => void;
+};
+
+function VotingBox({
+  group,
+  selectedCandidate,
+  votedCandidateIds,
+  votedParentIds,
+  isVotingId,
+  isAddingCandidate,
+  candidateText,
+  candidateDescription,
+  onCandidateTextChange,
+  onCandidateDescriptionChange,
+  onVote,
+  onAddCandidate,
+}: VotingBoxProps) {
+  const visibleCandidates = selectedCandidate
+    ? [selectedCandidate]
+    : group.candidates;
+
+  const groupAlreadyVoted = votedParentIds.includes(group.propositionId);
+
+  return (
+    <div className="mt-5 rounded-2xl border border-(--border) bg-(--surface) p-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Chip color="accent" variant="soft" size="sm">
+          <Chip.Label>en votación</Chip.Label>
+        </Chip>
+
+        <Chip color="default" variant="soft" size="sm">
+          <Chip.Label>no apostable todavía</Chip.Label>
+        </Chip>
+
+        {groupAlreadyVoted && (
+          <Chip color="success" variant="soft" size="sm">
+            <Chip.Label>ya votaste</Chip.Label>
+          </Chip>
+        )}
+      </div>
+
+      <p className="mt-4 text-xs uppercase tracking-widest text-(--muted)">
+        Gathel
+      </p>
+
+      <h1 className="mt-2 font-display text-xl font-semibold leading-snug text-(--foreground) sm:text-2xl">
+        {group.title}
+      </h1>
+
+      {group.description && (
+        <p className="mt-2 text-sm leading-relaxed text-(--muted)">
+          {group.description}
+        </p>
+      )}
+
+      <div className="mt-5 flex items-center justify-between border-t border-(--separator) pt-3 text-xs text-(--muted)">
+        <span className="flex items-center gap-1">
+          <Users size={14} />
+          {group.candidates.length} opciones candidatas
+        </span>
+
+        <span className="flex items-center gap-1">
+          <Clock size={14} />
+          {getTimeLeft(group.endPredictionDateTime)}
+        </span>
+      </div>
+
+      {groupAlreadyVoted && (
+        <div className="mt-4 rounded-xl border border-(--success)/30 bg-(--success-soft) p-3">
+          <p className="text-xs font-medium text-(--success)">
+            Ya votaste en este Gathel. Solo se permite un voto por Gathel.
+          </p>
+        </div>
+      )}
+
+      <div className="mt-4 rounded-xl bg-(--surface-secondary) p-4">
+        <p className="text-xs font-medium uppercase tracking-widest text-(--muted)">
+          {selectedCandidate ? "Opción seleccionada" : "Opciones candidatas"}
+        </p>
+
+        <div className="mt-3 flex flex-col gap-3">
+          {visibleCandidates.length === 0 ? (
+            <p className="text-sm text-(--muted)">
+              Este Gathel todavía no tiene opciones candidatas.
+            </p>
+          ) : (
+            visibleCandidates.map((candidate) => {
+              const voted = votedCandidateIds.includes(candidate.propositionId);
+
+              return (
+                <div
+                  key={candidate.propositionId}
+                  className="rounded-xl border border-(--border) bg-(--surface) p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium leading-relaxed text-(--foreground)">
+                        {candidate.title}
+                      </p>
+
+                      {candidate.description && (
+                        <p className="mt-1 text-xs leading-relaxed text-(--muted)">
+                          {candidate.description}
+                        </p>
+                      )}
+
+                      <p className="mt-2 text-xs text-(--muted)">
+                        Propuesta por usuario {candidate.creatorPersonId}
+                      </p>
+                    </div>
+
+                    {voted ? (
+                      <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-(--success)/30 bg-(--success-soft) px-3 py-1 text-xs font-medium text-(--success)">
+                        <CheckCircle size={13} />
+                        Votada
+                      </div>
+                    ) : groupAlreadyVoted ? (
+                      <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-(--border) bg-(--surface-secondary) px-3 py-1 text-xs font-medium text-(--muted)">
+                        Bloqueada
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={isVotingId === candidate.propositionId}
+                        onClick={() =>
+                          onVote(candidate.propositionId, group.propositionId)
+                        }
+                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-(--field-radius) bg-(--accent) px-3 py-2 text-xs font-medium text-(--accent-foreground) transition-colors hover:bg-(--accent-hover) disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Vote size={14} />
+                        {isVotingId === candidate.propositionId
+                          ? "Votando..."
+                          : "Votar"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {!selectedCandidate && (
+        <div className="mt-4 rounded-xl border border-(--border) bg-(--surface-secondary) p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-(--accent-soft) p-2 text-(--accent)">
+              <Lightbulb size={16} />
+            </div>
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-widest text-(--muted)">
+                Añadir propuesta candidata
+              </p>
+
+              <p className="mt-1 text-xs leading-relaxed text-(--muted)">
+                Agregá otra opción posible para que la comunidad pueda votarla
+                dentro de este Gathel.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-col gap-3">
+            <textarea
+              value={candidateText}
+              onChange={(event) => onCandidateTextChange(event.target.value)}
+              rows={3}
+              maxLength={240}
+              placeholder='Ej: "María termina la maratón en menos de 5 horas."'
+              className="w-full resize-none rounded-xl border border-(--border) bg-(--surface) px-3 py-2 text-sm text-(--foreground) outline-none placeholder:text-(--muted) focus:border-(--accent)"
+            />
+
+            <textarea
+              value={candidateDescription}
+              onChange={(event) =>
+                onCandidateDescriptionChange(event.target.value)
+              }
+              rows={2}
+              maxLength={300}
+              placeholder="Descripción o forma de verificarla, opcional."
+              className="w-full resize-none rounded-xl border border-(--border) bg-(--surface) px-3 py-2 text-sm text-(--foreground) outline-none placeholder:text-(--muted) focus:border-(--accent)"
+            />
+
+            <button
+              type="button"
+              disabled={isAddingCandidate}
+              onClick={() => onAddCandidate(group)}
+              className="inline-flex items-center justify-center gap-2 rounded-(--field-radius) bg-(--accent) px-4 py-2 text-sm font-medium text-(--accent-foreground) transition-colors hover:bg-(--accent-hover) disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Plus size={15} />
+              {isAddingCandidate ? "Añadiendo..." : "Añadir propuesta"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 rounded-xl border border-(--border) bg-(--surface-secondary) p-4">
+        <p className="text-sm font-medium text-(--foreground)">
+          Esta etapa todavía no es una apuesta.
+        </p>
+
+        <p className="mt-1 text-sm text-(--muted)">
+          Primero se vota cuál opción candidata avanza. Luego la persona objetivo
+          acepta o rechaza la ganadora. Solo si la acepta se habilitan los
+          pronósticos con puntos o dinero.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function ProposicionDetallePage({
@@ -337,50 +560,217 @@ export default function ProposicionDetallePage({
   const { id } = use(params);
 
   const [item, setItem] = useState<PropositionDetail | null>(null);
+  const [votingGroup, setVotingGroup] =
+    useState<VotingPropositionGroupResponse | null>(null);
+  const [selectedCandidate, setSelectedCandidate] =
+    useState<VotingCandidateResponse | null>(null);
+
+  const [votedCandidateIds, setVotedCandidateIds] = useState<number[]>([]);
+  const [votedParentIds, setVotedParentIds] = useState<number[]>([]);
+  const [isVotingId, setIsVotingId] = useState<number | null>(null);
+
+  const [candidateText, setCandidateText] = useState("");
+  const [candidateDescription, setCandidateDescription] = useState("");
+  const [isAddingCandidate, setIsAddingCandidate] = useState(false);
+
   const [currentPersonId, setCurrentPersonId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  async function loadProposition() {
+    try {
+      setIsLoading(true);
+      setErrorMessage("");
+
+      const storedPersonId = localStorage.getItem("personId");
+      const personId = storedPersonId ? Number(storedPersonId) : null;
+
+      setCurrentPersonId(personId);
+
+      const propositionId = Number(id);
+
+      const [
+        propositionResponse,
+        predictionsResponse,
+        votingGroupsResponse,
+        myVotingVotes,
+      ] = await Promise.all([
+        getPropositionById(propositionId),
+        getPredictionsByProposition(propositionId),
+        getVotingPropositions(),
+        personId ? getMyVotingVotes(personId) : Promise.resolve([]),
+      ]);
+
+      setVotedCandidateIds(
+        myVotingVotes.map((vote) => vote.candidatePropositionId)
+      );
+
+      setVotedParentIds(myVotingVotes.map((vote) => vote.parentPropositionId));
+
+      const parentGroup = votingGroupsResponse.find(
+        (group) => group.propositionId === propositionId
+      );
+
+      if (parentGroup) {
+        setVotingGroup(parentGroup);
+        setSelectedCandidate(null);
+      } else {
+        const groupByCandidate = votingGroupsResponse.find((group) =>
+          group.candidates.some(
+            (candidate) => candidate.propositionId === propositionId
+          )
+        );
+
+        if (groupByCandidate) {
+          const candidate =
+            groupByCandidate.candidates.find(
+              (item) => item.propositionId === propositionId
+            ) ?? null;
+
+          setVotingGroup(groupByCandidate);
+          setSelectedCandidate(candidate);
+        } else {
+          setVotingGroup(null);
+          setSelectedCandidate(null);
+        }
+      }
+
+      const mappedPredictions = predictionsResponse
+        .map((prediction) => mapPrediction(prediction, personId))
+        .sort((a, b) => {
+          if (a.isCurrentUser && !b.isCurrentUser) return -1;
+          if (!a.isCurrentUser && b.isCurrentUser) return 1;
+          return 0;
+        });
+
+      setItem(mapPropositionToDetail(propositionResponse, mappedPredictions));
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo cargar la proposición."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function loadProposition() {
-      try {
-        setIsLoading(true);
-        setErrorMessage("");
-
-        const storedPersonId = localStorage.getItem("personId");
-        const personId = storedPersonId ? Number(storedPersonId) : null;
-
-        setCurrentPersonId(personId);
-
-        const propositionId = Number(id);
-
-        const [propositionResponse, predictionsResponse] = await Promise.all([
-          getPropositionById(propositionId),
-          getPredictionsByProposition(propositionId),
-        ]);
-
-        const mappedPredictions = predictionsResponse
-          .map((prediction) => mapPrediction(prediction, personId))
-          .sort((a, b) => {
-            if (a.isCurrentUser && !b.isCurrentUser) return -1;
-            if (!a.isCurrentUser && b.isCurrentUser) return 1;
-            return 0;
-          });
-
-        setItem(mapPropositionToDetail(propositionResponse, mappedPredictions));
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "No se pudo cargar la proposición."
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProposition();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  async function handleVote(
+    candidatePropositionId: number,
+    parentPropositionId: number
+  ) {
+    try {
+      setErrorMessage("");
+      setSuccessMessage("");
+      setIsVotingId(candidatePropositionId);
+
+      const storedPersonId = localStorage.getItem("personId");
+
+      if (!storedPersonId) {
+        setErrorMessage("No se encontró el usuario en sesión.");
+        return;
+      }
+
+      const personId = Number(storedPersonId);
+
+      await voteForCandidateProposition({
+        propositionId: candidatePropositionId,
+        personId,
+        voteValue: true,
+      });
+
+      setVotedCandidateIds((current) =>
+        current.includes(candidatePropositionId)
+          ? current
+          : [...current, candidatePropositionId]
+      );
+
+      setVotedParentIds((current) =>
+        current.includes(parentPropositionId)
+          ? current
+          : [...current, parentPropositionId]
+      );
+
+      setSuccessMessage("Voto registrado correctamente.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo registrar el voto."
+      );
+    } finally {
+      setIsVotingId(null);
+    }
+  }
+
+  async function handleAddCandidate(group: VotingPropositionGroupResponse) {
+    try {
+      setErrorMessage("");
+      setSuccessMessage("");
+      setIsAddingCandidate(true);
+
+      const storedPersonId = localStorage.getItem("personId");
+
+      if (!storedPersonId) {
+        setErrorMessage("No se encontró el usuario en sesión.");
+        return;
+      }
+
+      const personId = Number(storedPersonId);
+      const cleanText = candidateText.trim();
+      const cleanDescription = candidateDescription.trim();
+
+      if (!cleanText) {
+        setErrorMessage("Debe escribir una propuesta candidata.");
+        return;
+      }
+
+      const title = buildTitle(cleanText);
+
+      const descriptionParts = [
+        cleanDescription || "Proposición candidata añadida por la comunidad.",
+        "",
+        `Proposición hija del Gathel ID: ${group.propositionId}`,
+        `Creada por usuario ID: ${personId}`,
+      ];
+
+      await createProposition({
+        creatorPersonId: personId,
+        targetPersonId: group.targetPersonId,
+        targetSocialAccountId: group.targetSocialAccountId ?? null,
+        title,
+        description: descriptionParts.join("\n"),
+        startPredictionDateTime: group.startPredictionDateTime,
+        endPredictionDateTime: group.endPredictionDateTime,
+        minimumEntryPointsAmount: 1,
+        winningProfitPercentage: 10,
+        parentProposition: group.propositionId,
+        parentPropositionId: group.propositionId,
+      });
+
+      setCandidateText("");
+      setCandidateDescription("");
+
+      await loadProposition();
+
+      setSuccessMessage("Propuesta candidata añadida correctamente.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo añadir la propuesta candidata."
+      );
+    } finally {
+      setIsAddingCandidate(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -398,7 +788,7 @@ export default function ProposicionDetallePage({
         <div className="mx-auto max-w-2xl">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 text-sm text-(--muted) hover:text-(--foreground) transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-(--muted) transition-colors hover:text-(--foreground)"
           >
             <ArrowLeft size={15} aria-hidden="true" />
             Volver al feed
@@ -412,8 +802,56 @@ export default function ProposicionDetallePage({
     );
   }
 
+  const isVotingView = votingGroup !== null;
+
+  if (isVotingView) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-2xl">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-sm text-(--muted) transition-colors hover:text-(--foreground)"
+          >
+            <ArrowLeft size={15} aria-hidden="true" />
+            Volver al feed
+          </Link>
+
+          {errorMessage && (
+            <div className="mt-4 flex gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <p>{errorMessage}</p>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="mt-4 flex gap-2 rounded-2xl border border-(--success)/30 bg-(--success-soft) p-4 text-sm text-(--success)">
+              <CheckCircle size={16} className="mt-0.5 shrink-0" />
+              <p>{successMessage}</p>
+            </div>
+          )}
+
+          <VotingBox
+            group={votingGroup}
+            selectedCandidate={selectedCandidate}
+            votedCandidateIds={votedCandidateIds}
+            votedParentIds={votedParentIds}
+            isVotingId={isVotingId}
+            isAddingCandidate={isAddingCandidate}
+            candidateText={candidateText}
+            candidateDescription={candidateDescription}
+            onCandidateTextChange={setCandidateText}
+            onCandidateDescriptionChange={setCandidateDescription}
+            onVote={handleVote}
+            onAddCandidate={handleAddCandidate}
+          />
+        </div>
+      </AppShell>
+    );
+  }
+
   const siCount = item.predictions.filter((p) => p.vote === "si").length;
   const noCount = item.predictions.filter((p) => p.vote === "no").length;
+  const communitySplit = calculateCommunitySplit(item.predictions);
   const isActive = item.status === "activa";
 
   const isMine =
@@ -430,11 +868,25 @@ export default function ProposicionDetallePage({
       <div className="mx-auto max-w-2xl">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-(--muted) hover:text-(--foreground) transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-(--muted) transition-colors hover:text-(--foreground)"
         >
           <ArrowLeft size={15} aria-hidden="true" />
           Volver al feed
         </Link>
+
+        {errorMessage && (
+          <div className="mt-4 flex gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+            <p>{errorMessage}</p>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="mt-4 flex gap-2 rounded-2xl border border-(--success)/30 bg-(--success-soft) p-4 text-sm text-(--success)">
+            <CheckCircle size={16} className="mt-0.5 shrink-0" />
+            <p>{successMessage}</p>
+          </div>
+        )}
 
         <div className="mt-5 rounded-2xl border border-(--border) bg-(--surface) p-5">
           <div className="flex flex-wrap items-center gap-2">
@@ -482,16 +934,16 @@ export default function ProposicionDetallePage({
 
         <div className="mt-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-(--muted)">Probabilidad de la comunidad</span>
+            <span className="text-(--muted)">Distribución de pronósticos</span>
             <span className="font-display text-lg font-semibold text-(--accent)">
-              {item.probability}%
+              {communitySplit}% sí
             </span>
           </div>
 
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-(--default)">
             <div
               className="h-full rounded-full bg-(--accent) transition-all"
-              style={{ width: `${item.probability}%` }}
+              style={{ width: `${communitySplit}%` }}
             />
           </div>
 
@@ -513,45 +965,6 @@ export default function ProposicionDetallePage({
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
-          <p className="text-xs uppercase tracking-widest text-(--muted)">
-            Multiplicadores actuales
-          </p>
-
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-(--border) bg-(--surface-secondary) p-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={15} className="text-(--success)" />
-                <p className="text-sm font-medium text-(--foreground)">
-                  Sí va a pasar
-                </p>
-              </div>
-
-              <p className="mt-2 font-display text-2xl font-semibold text-(--success)">
-                x{item.yesMultiplier.toFixed(2)}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-(--border) bg-(--surface-secondary) p-4">
-              <div className="flex items-center gap-2">
-                <TrendingDown size={15} className="text-(--danger)" />
-                <p className="text-sm font-medium text-(--foreground)">
-                  No va a pasar
-                </p>
-              </div>
-
-              <p className="mt-2 font-display text-2xl font-semibold text-(--danger)">
-                x{item.noMultiplier.toFixed(2)}
-              </p>
-            </div>
-          </div>
-
-          <p className="mt-3 text-xs text-(--muted)">
-            El multiplicador cambia según cómo se distribuyen los pronósticos de
-            la comunidad.
-          </p>
-        </div>
-
         {item.status !== "activa" && (
           <div className="mt-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
             <p className="text-xs uppercase tracking-widest text-(--muted)">
@@ -570,8 +983,8 @@ export default function ProposicionDetallePage({
                   aria-hidden="true"
                 />
                 <p className="text-sm text-(--muted)">
-                  La evidencia fue analizada por IA a partir de publicaciones en
-                  redes sociales con el hashtag #gathel.
+                  La evidencia será validada a partir de publicaciones
+                  relacionadas al Gathel.
                 </p>
               </div>
             )}
@@ -610,14 +1023,8 @@ export default function ProposicionDetallePage({
             </p>
 
             <p className="mt-1 text-sm text-(--muted)">
-              Modo:{" "}
-              <span className="text-(--foreground)">
-                {item.mode === "puntos"
-                  ? "apuesta hasta 1 punto"
-                  : item.mode === "dinero"
-                  ? "elige el monto en dinero real"
-                  : "puntos o dinero real"}
-              </span>
+              Esta proposición ya fue aceptada por la persona objetivo. Ahora sí
+              podés hacer un pronóstico.
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3">

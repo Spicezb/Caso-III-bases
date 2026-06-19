@@ -18,6 +18,7 @@ import {
   TrendingDown,
   AlertCircle,
   CheckCircle,
+  Wallet,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import {
@@ -38,11 +39,12 @@ type PredictionMode = "puntos" | "dinero" | "ambos";
 type PropositionForPrediction = {
   id: string;
   text: string;
+  status: string;
   pool: string;
   timeLeft: string;
   mode: PredictionMode;
-  yesMultiplier: number;
-  noMultiplier: number;
+  creatorPersonId: number;
+  targetPersonId: number;
 };
 
 function getTimeLeft(dateText: string) {
@@ -63,24 +65,8 @@ function getTimeLeft(dateText: string) {
   return `quedan ${diffDays} días`;
 }
 
-function calculateYesProbability(predictions: PredictionResponse[]) {
-  if (predictions.length === 0) {
-    return 50;
-  }
-
-  const yesVotes = predictions.filter((p) => p.predictionValue).length;
-
-  return Math.round((yesVotes / predictions.length) * 100);
-}
-
-function calculateMultiplier(probability: number) {
-  const safeProbability = Math.max(probability, 5);
-
-  return Number((100 / safeProbability).toFixed(2));
-}
-
-function calculatePotentialWin(amount: number, multiplier: number) {
-  return Number((amount * multiplier).toFixed(2));
+function normalizeStatus(status: string | null | undefined) {
+  return (status ?? "").toLowerCase();
 }
 
 function detectPredictionMode(
@@ -141,7 +127,9 @@ function calculatePool(
   }
 
   if (mode === "ambos") {
-    return `${totalPoints} pts · $${totalMoney.toFixed(2)}`;
+    return `${totalPoints || fallbackPoints || 1} pts · $${totalMoney.toFixed(
+      2
+    )}`;
   }
 
   return `${totalPoints || fallbackPoints || 1} pts`;
@@ -152,17 +140,16 @@ function mapProposition(
   predictions: PredictionResponse[]
 ): PropositionForPrediction {
   const mode = detectPredictionMode(p, predictions);
-  const yesProbability = calculateYesProbability(predictions);
-  const noProbability = 100 - yesProbability;
 
   return {
     id: String(p.propositionId),
     text: p.title || p.description || "Proposición sin título",
-    pool: calculatePool(predictions, p.minimumEntryPointsAmount, mode),
+    status: p.status,
+    pool: calculatePool(predictions, p.minimumEntryPointsAmount ?? null, mode),
     timeLeft: getTimeLeft(p.endPredictionDateTime),
     mode,
-    yesMultiplier: calculateMultiplier(yesProbability),
-    noMultiplier: calculateMultiplier(noProbability),
+    creatorPersonId: p.creatorPersonId,
+    targetPersonId: p.targetPersonId,
   };
 }
 
@@ -190,13 +177,6 @@ export default function PronosticarPage({
   const usarPuntos = metodo === "puntos";
   const montoNum = parseFloat(monto) || 0;
 
-  const selectedMultiplier =
-    voto === "si" ? prop?.yesMultiplier ?? 1 : prop?.noMultiplier ?? 1;
-
-  const betAmount = usarPuntos ? MAX_POINTS : montoNum;
-
-  const potentialWin = calculatePotentialWin(betAmount, selectedMultiplier);
-
   useEffect(() => {
     async function loadData() {
       try {
@@ -220,6 +200,23 @@ export default function PronosticarPage({
           ]);
 
         const mapped = mapProposition(propositionResponse, predictionsResponse);
+
+        if (normalizeStatus(mapped.status) !== "active") {
+          setError(
+            "Esta proposición todavía no está activa para recibir pronósticos."
+          );
+          return;
+        }
+
+        if (
+          mapped.creatorPersonId === personId ||
+          mapped.targetPersonId === personId
+        ) {
+          setError(
+            "No podés pronosticar en una proposición que creaste o que es sobre vos."
+          );
+          return;
+        }
 
         setProp(mapped);
         setPerson(personResponse);
@@ -246,6 +243,18 @@ export default function PronosticarPage({
   function validate() {
     if (!person) return "No se encontró el usuario en sesión.";
     if (!prop) return "No se encontró la proposición.";
+
+    if (normalizeStatus(prop.status) !== "active") {
+      return "Esta proposición no está activa para pronosticar.";
+    }
+
+    if (person.personId === prop.creatorPersonId) {
+      return "No podés pronosticar en una proposición que creaste.";
+    }
+
+    if (person.personId === prop.targetPersonId) {
+      return "No podés pronosticar en una proposición que es sobre vos.";
+    }
 
     if (usarPuntos) {
       if (person.pointsBalance < MAX_POINTS) {
@@ -326,7 +335,7 @@ export default function PronosticarPage({
         <div className="mx-auto max-w-sm">
           <Link
             href={`/dashboard/proposicion/${id}`}
-            className="inline-flex items-center gap-1.5 text-sm text-(--muted) hover:text-(--foreground) transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-(--muted) transition-colors hover:text-(--foreground)"
           >
             <ArrowLeft size={15} aria-hidden="true" />
             Volver al detalle
@@ -357,7 +366,7 @@ export default function PronosticarPage({
           </h1>
 
           <p className="mt-2 text-sm text-(--muted)">
-            Apostaste a que{" "}
+            Pronosticaste que{" "}
             <span className="font-medium text-(--foreground)">
               {voto === "si" ? "sí va a pasar" : "no va a pasar"}
             </span>{" "}
@@ -383,18 +392,16 @@ export default function PronosticarPage({
             </div>
 
             <div className="flex items-center justify-between text-xs text-(--muted)">
-              <span>Multiplicador usado</span>
+              <span>Tu pronóstico</span>
               <span className="text-(--foreground)">
-                x{selectedMultiplier.toFixed(2)}
+                {voto === "si" ? "Sí va a pasar" : "No va a pasar"}
               </span>
             </div>
 
             <div className="flex items-center justify-between text-xs text-(--muted)">
-              <span>Ganancia potencial</span>
+              <span>Monto usado</span>
               <span className="text-(--foreground)">
-                {usarPuntos
-                  ? `${potentialWin.toFixed(2)} pts`
-                  : `$${potentialWin.toFixed(2)}`}
+                {usarPuntos ? "1 pt" : `$${montoNum.toFixed(2)}`}
               </span>
             </div>
           </div>
@@ -409,14 +416,14 @@ export default function PronosticarPage({
           <div className="mt-8 flex w-full flex-col gap-3">
             <Link
               href={`/dashboard/proposicion/${id}`}
-              className="rounded-lg bg-(--accent) px-4 py-2.5 text-center text-sm font-medium text-(--accent-foreground) hover:opacity-90 transition-opacity"
+              className="rounded-lg bg-(--accent) px-4 py-2.5 text-center text-sm font-medium text-(--accent-foreground) transition-opacity hover:opacity-90"
             >
               Ver la proposición
             </Link>
 
             <Link
               href="/dashboard"
-              className="rounded-lg border border-(--border) px-4 py-2.5 text-center text-sm text-(--muted) hover:text-(--foreground) transition-colors"
+              className="rounded-lg border border-(--border) px-4 py-2.5 text-center text-sm text-(--muted) transition-colors hover:text-(--foreground)"
             >
               Volver al feed
             </Link>
@@ -431,7 +438,7 @@ export default function PronosticarPage({
       <div className="mx-auto max-w-sm">
         <Link
           href={`/dashboard/proposicion/${id}`}
-          className="inline-flex items-center gap-1.5 text-sm text-(--muted) hover:text-(--foreground) transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-(--muted) transition-colors hover:text-(--foreground)"
         >
           <ArrowLeft size={15} aria-hidden="true" />
           Volver al detalle
@@ -452,20 +459,13 @@ export default function PronosticarPage({
             <span className="text-(--accent)">{prop.timeLeft}</span>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-lg border border-(--border) bg-(--surface-secondary) p-2">
-              <p className="text-(--muted)">Sí</p>
-              <p className="font-semibold text-(--success)">
-                x{prop.yesMultiplier.toFixed(2)}
-              </p>
-            </div>
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-(--accent)/30 bg-(--accent-soft) p-3">
+            <Wallet size={16} className="mt-0.5 shrink-0 text-(--accent)" />
 
-            <div className="rounded-lg border border-(--border) bg-(--surface-secondary) p-2">
-              <p className="text-(--muted)">No</p>
-              <p className="font-semibold text-(--danger)">
-                x{prop.noMultiplier.toFixed(2)}
-              </p>
-            </div>
+            <p className="text-xs leading-relaxed text-(--muted)">
+              La recompensa se calcula con la bolsa acumulada y la distribución
+              final de ganadores. No se usa multiplicador fijo en esta pantalla.
+            </p>
           </div>
         </div>
 
@@ -515,7 +515,7 @@ export default function PronosticarPage({
                 setError("");
               }}
             >
-              <Label>¿Con qué apostás?</Label>
+              <Label>¿Con qué pronosticás?</Label>
 
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {(["puntos", "dinero"] as const).map((m) => (
@@ -543,7 +543,7 @@ export default function PronosticarPage({
 
           {usarPuntos ? (
             <div className="rounded-xl border border-(--border) bg-(--surface) p-4">
-              <p className="text-sm text-(--muted)">Monto a apostar</p>
+              <p className="text-sm text-(--muted)">Monto a usar</p>
 
               <p className="mt-1 font-display text-3xl font-semibold text-(--foreground)">
                 1 punto
@@ -569,7 +569,7 @@ export default function PronosticarPage({
               onChange={setMonto}
               isRequired
             >
-              <Label>Monto a apostar (USD)</Label>
+              <Label>Monto a usar (USD)</Label>
 
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-(--muted)">
@@ -614,34 +614,25 @@ export default function PronosticarPage({
                 </div>
 
                 <div className="flex justify-between">
-                  <span className="text-(--muted)">Apuesta</span>
+                  <span className="text-(--muted)">Monto</span>
                   <span className="font-medium text-(--foreground)">
                     {usarPuntos ? "1 pt" : `$${montoNum.toFixed(2)}`}
                   </span>
                 </div>
 
                 <div className="flex justify-between">
-                  <span className="text-(--muted)">Multiplicador</span>
+                  <span className="text-(--muted)">Bolsa actual</span>
                   <span className="font-medium text-(--foreground)">
-                    x{selectedMultiplier.toFixed(2)}
+                    {prop.pool}
                   </span>
                 </div>
 
                 <div className="flex justify-between">
-                  <span className="text-(--muted)">Ganancia potencial</span>
-                  <span className="font-medium text-(--foreground)">
-                    {usarPuntos
-                      ? `${potentialWin.toFixed(2)} pts`
-                      : `$${potentialWin.toFixed(2)}`}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-(--muted)">Balance tras apostar</span>
+                  <span className="text-(--muted)">Balance tras usar puntos</span>
                   <span className="font-medium text-(--foreground)">
                     {usarPuntos
                       ? `${person.pointsBalance - MAX_POINTS} pts`
-                      : "Pendiente de cálculo"}
+                      : "No aplica"}
                   </span>
                 </div>
               </div>

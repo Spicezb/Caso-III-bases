@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Avatar, Chip } from "@heroui/react";
 import {
   Home,
@@ -10,6 +11,8 @@ import {
   User,
   Wallet,
   Plus,
+  Trophy,
+  ClipboardCheck,
 } from "lucide-react";
 import { getMe, PersonResponse, getPredictionsByPerson } from "@/lib/gathel-api";
 
@@ -18,6 +21,8 @@ const INITIAL_MONEY_BALANCE = 100;
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Inicio", icon: Home },
   { href: "/dashboard/explorar", label: "Explorar", icon: Compass },
+  { href: "/dashboard/resultados", label: "Resultados", icon: Trophy },
+  { href: "/dashboard/pendientes", label: "Pendientes", icon: ClipboardCheck },
   { href: "/dashboard/notificaciones", label: "Notificaciones", icon: Bell },
   { href: "/dashboard/perfil", label: "Perfil", icon: User },
 ];
@@ -31,11 +36,11 @@ function getAvatarFallback(name?: string, lastName?: string) {
 
 export default function AppShell({
   children,
-  active = "/dashboard",
 }: {
   children: React.ReactNode;
-  active?: string;
 }) {
+  const pathname = usePathname();
+
   const [user, setUser] = useState<PersonResponse | null>(null);
   const [moneyBalance, setMoneyBalance] = useState(INITIAL_MONEY_BALANCE);
 
@@ -81,9 +86,9 @@ export default function AppShell({
   const avatarFallback = getAvatarFallback(user?.name, user?.lastName);
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
-      <aside className="hidden border-r border-(--separator) bg-(--surface-secondary) px-4 py-6 lg:flex lg:flex-col">
-        <Link href="/" className="flex items-center gap-2 px-2">
+    <div className="min-h-screen bg-(--background) text-(--foreground) lg:grid lg:grid-cols-[260px_1fr]">
+      <aside className="sticky left-0 top-0 hidden h-screen flex-col border-r border-(--separator) bg-(--surface-secondary) px-4 py-6 lg:flex">
+        <Link href="/dashboard" className="flex items-center gap-2 px-2">
           <span className="font-display text-xl font-semibold tracking-tight text-(--foreground)">
             gathel
           </span>
@@ -93,7 +98,10 @@ export default function AppShell({
         <nav className="mt-8 flex flex-col gap-1">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive = item.href === active;
+
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/dashboard" && pathname.startsWith(item.href));
 
             return (
               <Link
@@ -125,26 +133,35 @@ export default function AppShell({
           </div>
         </div>
 
-        <div className="mt-auto flex items-center gap-2.5 rounded-lg px-2 py-2">
-          <Avatar size="sm">
-            <Avatar.Fallback>{avatarFallback}</Avatar.Fallback>
-          </Avatar>
+        <div className="mt-auto w-full pt-6">
+          <Link
+            href="/dashboard/perfil"
+            className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-(--surface)"
+          >
+            <Avatar size="sm" className="shrink-0">
+              <Avatar.Fallback>{avatarFallback}</Avatar.Fallback>
+            </Avatar>
 
-          <div className="leading-tight">
-            <p className="text-sm font-medium text-(--foreground)">
-              {displayName}
-            </p>
-            <p className="text-xs text-(--muted)">{handle}</p>
-          </div>
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="truncate text-sm font-semibold text-(--foreground)">
+                {displayName}
+              </p>
+
+              <p className="truncate text-xs text-(--muted)">
+                {handle}
+              </p>
+            </div>
+          </Link>
         </div>
       </aside>
 
-      <div className="flex flex-col">
+      <div className="flex min-h-screen flex-col">
         <header className="sticky top-0 z-40 flex items-center justify-between border-b border-(--separator) bg-(--background)/85 px-4 py-3 backdrop-blur-md sm:px-6">
-          <Link href="/" className="flex items-center gap-2 lg:hidden">
+          <Link href="/dashboard" className="flex items-center gap-2 lg:hidden">
             <span className="font-display text-lg font-semibold tracking-tight text-(--foreground)">
               gathel
             </span>
+            <span className="h-1.5 w-1.5 rounded-full bg-(--success)" />
           </Link>
 
           <div className="hidden items-center gap-2 sm:flex">
@@ -166,9 +183,11 @@ export default function AppShell({
               <span className="hidden sm:inline">Nueva proposición</span>
             </Link>
 
-            <Avatar size="sm" className="lg:hidden">
-              <Avatar.Fallback>{avatarFallback}</Avatar.Fallback>
-            </Avatar>
+            <Link href="/dashboard/perfil" className="lg:hidden">
+              <Avatar size="sm">
+                <Avatar.Fallback>{avatarFallback}</Avatar.Fallback>
+              </Avatar>
+            </Link>
           </div>
         </header>
 
@@ -177,7 +196,10 @@ export default function AppShell({
         <nav className="sticky bottom-0 z-40 flex items-center justify-around border-t border-(--separator) bg-(--background)/95 py-2 backdrop-blur-md lg:hidden">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive = item.href === active;
+
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/dashboard" && pathname.startsWith(item.href));
 
             return (
               <Link
