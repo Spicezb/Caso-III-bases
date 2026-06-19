@@ -31,40 +31,63 @@ public class AuthController : ControllerBase
             });
         }
 
-        var person = await _context.People
-            .Where(p =>
-                !p.IsDeleted &&
-                p.IsActive &&
-                (
-                    p.Email == request.Identifier ||
-                    p.Username == request.Identifier
-                )
-            )
-            .Select(p => new
-            {
-                p.PersonId,
-                p.Name,
-                p.LastName,
-                p.Username,
-                p.Email,
-                p.IsVerified,
-                p.IsActive
-            })
-            .FirstOrDefaultAsync();
-
-        if (person == null)
+        if (string.IsNullOrWhiteSpace(request.Password))
         {
-            return Unauthorized(new
+            return BadRequest(new
             {
-                message = "Credenciales inválidas."
+                message = "Debe ingresar la contraseña."
             });
         }
 
-        return Ok(new
+        var connectionString = _configuration.GetConnectionString("GathelDb");
+
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        await using var command = new SqlCommand("spLoginPerson", connection);
+        command.CommandType = CommandType.StoredProcedure;
+
+        command.Parameters.AddWithValue("@identifier", request.Identifier);
+        command.Parameters.AddWithValue("@password", request.Password);
+
+        try
         {
-            message = "Login successful",
-            person
-        });
+            await using var reader = await command.ExecuteReaderAsync();
+
+            if (!await reader.ReadAsync())
+            {
+                return Unauthorized(new
+                {
+                    message = "Credenciales inválidas."
+                });
+            }
+
+            var person = new
+            {
+                PersonId = reader.GetInt32(reader.GetOrdinal("personId")),
+                Name = reader.GetString(reader.GetOrdinal("name")),
+                LastName = reader.IsDBNull(reader.GetOrdinal("lastName"))
+                    ? null
+                    : reader.GetString(reader.GetOrdinal("lastName")),
+                Username = reader.GetString(reader.GetOrdinal("username")),
+                Email = reader.GetString(reader.GetOrdinal("email")),
+                IsVerified = reader.GetBoolean(reader.GetOrdinal("isVerified")),
+                IsActive = reader.GetBoolean(reader.GetOrdinal("isActive"))
+            };
+
+            return Ok(new
+            {
+                message = "Login successful",
+                person
+            });
+        }
+        catch (SqlException ex) when (ex.Number >= 51300 && ex.Number <= 51399)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
     }
 
     [HttpPost("register")]

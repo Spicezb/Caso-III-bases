@@ -373,40 +373,21 @@ public class PropositionService
 
     public async Task<List<VotingVoteResponse>> GetVotingVotesByPersonAsync(int personId)
     {
-        var votes = new List<VotingVoteResponse>();
-
-        var connectionString = _configuration.GetConnectionString("GathelDb");
-
-        await using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync();
-
-        const string sql = @"
-            SELECT
-                child.parentproposition AS ParentPropositionId,
-                child.propositionId AS CandidatePropositionId
-            FROM propositionVotes pv
-            INNER JOIN propositions child
-                ON child.propositionId = pv.propositionId
-            WHERE pv.personId = @personId
-              AND pv.isDeleted = 0
-              AND pv.voteValue = 1
-              AND child.isDeleted = 0
-              AND child.parentproposition IS NOT NULL;
-        ";
-
-        await using var command = new SqlCommand(sql, connection);
-        command.Parameters.AddWithValue("@personId", personId);
-
-        await using var reader = await command.ExecuteReaderAsync();
-
-        while (await reader.ReadAsync())
-        {
-            votes.Add(new VotingVoteResponse
+        var votes = await (
+            from pv in _context.PropositionVotes
+            join child in _context.Propositions
+                on pv.PropositionId equals child.PropositionId
+            where pv.PersonId == personId
+                && !pv.IsDeleted
+                && pv.VoteValue == true
+                && !child.IsDeleted
+                && child.ParentProposition != null
+            select new VotingVoteResponse
             {
-                ParentPropositionId = reader.GetInt32(reader.GetOrdinal("ParentPropositionId")),
-                CandidatePropositionId = reader.GetInt32(reader.GetOrdinal("CandidatePropositionId"))
-            });
-        }
+                ParentPropositionId = child.ParentProposition!.Value,
+                CandidatePropositionId = child.PropositionId
+            }
+        ).ToListAsync();
 
         return votes;
     }
