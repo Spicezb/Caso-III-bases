@@ -19,16 +19,24 @@ Diseñar una base de datos que cumpla con lo solicitado por el profesor y un MVP
 
 El proyecto contempla el diseño del modelo de datos, documentación técnica, migraciones con Flyway, scripts de seeding, laboratorios de seguridad, pruebas de transacciones y concurrencia, además de una aplicación mínima con frontend, backend y REST API.
 
-## Guía del proyecto (Documentación) 
+## Guía del proyecto (Documentación)
 
-Por definir... Acá irían enlaces a carpetas especificas tipo Agentes IA -> Enlace a carpeta
+La documentación del proyecto se organiza en las siguientes áreas:
 
-La documentación se divide en cuatro áreas principales:
-
-1. **Diseño de base de datos:** especificación Markdown, DBML y diagrama PDF.
+1. **Diseño de base de datos:** especificación en Markdown y diagrama del modelo.
 2. **Administración de base de datos:** migraciones Flyway, seeding, scripts SQL y datos iniciales.
-3. **Laboratorios técnicos:** seguridad, transacciones, concurrencia y live coding.
-4. **MVP:** backend, frontend, endpoints, ejecución y Docker Compose.
+3. **Agentes de IA:** agentes utilizados para revisar seguridad, normalización, escalabilidad y economía del modelo.
+4. **Laboratorios técnicos:** seguridad, transacciones, concurrencia y live coding.
+5. **MVP:** backend, frontend, REST API y ejecución del proyecto.
+
+Archivos principales:
+
+- [Diseño de tablas](BDDdesign/tablas_gathel.md)
+- [Investigación de Flyway](docs/flywayResearch.md)
+- [Agentes de IA](docs/Agentes%20de%20IA/)
+- [Migraciones Flyway](flyway/sql/)
+- [Backend](backend/Gathel.Api/)
+- [Frontend](frontend/)
 
 ## Alcance del MVP
 
@@ -236,7 +244,7 @@ docker compose up -d sqlserver
 
 ### Ejecutar migraciones con Flyway
 
-Cuando existan scripts SQL con contenido real dentro de `flyway/sql`, se ejecuta:
+Las migraciones SQL se encuentran en `flyway/sql/` y se ejecutan mediante Docker Compose:
 
 ```bash
 docker compose run --rm flyway
@@ -255,7 +263,7 @@ Contraseña: Gathel123!
 Luego ejecutar:
 
 ```sql
-USE GathelDB o master; 
+USE GathelDB; 
 GO
 
 SELECT *
@@ -281,9 +289,6 @@ npm run dev
 ```
 Se accede a este con: http://localhost:3000
 
-### 5. Cambiá “Estado actual del proyecto” por esto
-
-:::writing{variant="document" id="83524"}
 ## Estado actual del proyecto
 
 | Fase                                     | Estado      |
@@ -310,8 +315,6 @@ Se accede a este con: http://localhost:3000
 | Pronósticos con puntos o dinero real     | Implementado |
 | Pantalla de resultados                   | Implementado |
 | Scripts SQL de apoyo para demostración   | En progreso |
-:::
-
 
 ## Flujo principal implementado en el MVP
 
