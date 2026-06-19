@@ -222,10 +222,11 @@ Tampoco es necesario levantar manualmente el backend ni el frontend para la ejec
 
 Desde la raíz del proyecto, donde se encuentra el archivo `docker-compose.yml`, ejecutar:
 
-```bash
+```powershell
+$env:COMPOSE_BAKE="false"
+$env:DOCKER_BUILDKIT="0"
 docker compose up --build
 ```
-
 Este comando construye y levanta los contenedores del backend, frontend, SQL Server y Flyway.
 
 Una vez levantados los servicios, se puede acceder a:
