@@ -57,54 +57,112 @@ La integración real con redes sociales e inteligencia artificial no forma parte
 
 ## Estructura del Repositorio
 
-Por definir... Como están acomodadas las carpetas dentro del repositorio. Ejemplo: 
+La estructura principal del proyecto es la siguiente:
 
 ```txt
-gathel/
+Caso-III-bases/
 │
-├── README.md
-├── docker-compose.yml
-│
-├── docs/
-│   ├── database-spec.md
-│   ├── flyway-guide.md
-│   ├── seeding.md
-│   ├── security-lab.md
-│   ├── transactions-concurrency.md
-│   ├── live-coding-guide.md
-│   ├── docker-guide.md
-│   │
-│   ├── agents/
-│   │   └── README.md
-│   │
-│   └── agent-results/
-│       └── README.md
-│
-├── dbml/
-│   └── gathel.dbml
-│
-├── diagrams/
-│   └── gathel-database.pdf
-│
-├── flyway/
-│   ├── conf/
-│   │   └── flyway.conf
-│   │
-│   └── sql/
-│       ├── V1__create_schemas.sql
-│       ├── V2__create_tables.sql
-│       ├── V3__constraints_indexes.sql
-│       ├── V4__stored_procedures.sql
-│       ├── V5__views_functions.sql
-│       ├── V6__security_lab.sql
-│       ├── V7__transactions_concurrency.sql
-│       └── V8__seed_data.sql
-│
-├── backend/
-│   └── README.md
-│
-└── frontend/
-    └── README.md
+└── Gathel/
+    │
+    ├── README.md
+    ├── docker-compose.yml
+    │
+    ├── BDDdesign/
+    │   ├── Diagrama_Gathel.png
+    │   └── tablas_gathel.md
+    │
+    ├── docs/
+    │   ├── flywayResearch.md
+    │   │
+    │   └── Agentes de IA/
+    │       ├── financialAgent.md
+    │       ├── NormalizationAgent.md
+    │       ├── ScalabilityAgent.md
+    │       └── SecurityAgent.md
+    │
+    ├── flyway/
+    │   ├── conf/
+    │   │   └── flyway.conf
+    │   │
+    │   └── sql/
+    │       ├── V1__create_database.sql
+    │       ├── V2__create_tables.sql
+    │       ├── V3__seeding.sql
+    │       ├── V4__important_changes.sql
+    │       ├── V5__permission_tables.sql
+    │       ├── V6__register_person_procedure.sql
+    │       ├── V7__create_proposition_procedure.sql
+    │       ├── V8__create_prediction_procedures.sql
+    │       ├── V9__update_money_prediction_balance_validation.sql
+    │       ├── V10__gathel_candidate_voting_flow.sql
+    │       ├── V11__gathel_candidate_voting_procedures.sql
+    │       ├── V12__update_create_proposition_to_voting.sql
+    │       ├── V13__update_prediction_procedures_for_better_flow.sql
+    │       ├── V14__normalize_generated_proposition_statuses.sql
+    │       ├── V15__followers_tables.sql
+    │       ├── V16__update_candidate_flow_to_parent_proposition.sql
+    │       ├── V17__update_vote_candidate_one_vote_per_parent.sql
+    │       └── V18__transactions_and_concurrency.sql
+    │
+    ├── backend/
+    │   └── Gathel.Api/
+    │       ├── Controllers/
+    │       │   ├── AuthController.cs
+    │       │   ├── HealthController.cs
+    │       │   ├── NotificationsController.cs
+    │       │   ├── PeopleController.cs
+    │       │   ├── PredictionsController.cs
+    │       │   └── PropositionsController.cs
+    │       │
+    │       ├── Data/
+    │       │   └── GathelDbContext.cs
+    │       │
+    │       ├── DTOs/
+    │       │   ├── AcceptPropositionRequest.cs
+    │       │   ├── CreateMoneyPredictionRequest.cs
+    │       │   ├── CreatePointPredictionRequest.cs
+    │       │   ├── CreatePropositionRequest.cs
+    │       │   ├── LoginRequest.cs
+    │       │   ├── RegisterRequest.cs
+    │       │   ├── RejectPropositionRequest.cs
+    │       │   ├── VoteForCandidateRequest.cs
+    │       │   ├── VotingPropositionGroupResponse.cs
+    │       │   └── VotingVoteResponse.cs
+    │       │
+    │       ├── Models/
+    │       │   ├── Notification.cs
+    │       │   ├── NotificationType.cs
+    │       │   ├── Person.cs
+    │       │   ├── Prediction.cs
+    │       │   ├── Proposition.cs
+    │       │   ├── StatusType.cs
+    │       │   ├── Wallet.cs
+    │       │   └── WalletBalance.cs
+    │       │
+    │       ├── Services/
+    │       │   ├── PeopleService.cs
+    │       │   ├── PredictionService.cs
+    │       │   └── PropositionService.cs
+    │       │
+    │       ├── Properties/
+    │       ├── appsettings.Development.json
+    │       ├── appsettings.json
+    │       ├── Gathel.Api.csproj
+    │       ├── Gathel.Api.http
+    │       └── Program.cs
+    │
+    └── frontend/
+        ├── app/
+        ├── components/
+        ├── lib/
+        ├── public/
+        ├── .gitignore
+        ├── eslint.config.mjs
+        ├── package-lock.json
+        ├── package.json
+        ├── postcss.config.mjs
+        ├── README.md
+        └── tsconfig.json
 ```
 
 ## Agentes Implementados 
