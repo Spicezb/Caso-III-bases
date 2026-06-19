@@ -32,7 +32,7 @@ La documentación del proyecto se organiza en las siguientes áreas:
 
 Archivos principales:
 
-* [Diseño de tablas](Gathel/BDDdesign)
+* [Diseño de tablas](Gathel/BDDesign/tablas_gathel.md)
 * [Investigación de Flyway](Gathel/docs/flywayResearch.md)
 * [Agentes de IA](Gathel/docs/Agentes%20de%20IA/)
 * [Migraciones Flyway](Gathel/flyway/sql/)
