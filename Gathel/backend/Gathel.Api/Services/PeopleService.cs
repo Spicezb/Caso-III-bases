@@ -44,6 +44,7 @@ public class PeopleService
             var lastBalance = await _context.WalletBalances
                 .Where(b => b.WalletId == wallet.WalletId && !b.IsDeleted)
                 .OrderByDescending(b => b.CalculatedAt)
+                .ThenByDescending(b => b.WalletBalanceId)
                 .FirstOrDefaultAsync();
 
             pointsBalance = lastBalance?.NewPointsAmount
