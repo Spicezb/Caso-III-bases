@@ -127,11 +127,6 @@ EXEC sp_set_session_context
 SELECT *
 FROM wallets;
 
---Volver al admin
-EXEC sp_set_session_context
-    @key = N'PersonId',
-    @value = NULL;
-
 --Desactivar política
 ALTER SECURITY POLICY WalletSecurityPolicy
 WITH (STATE = OFF);

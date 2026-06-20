@@ -408,7 +408,7 @@ GO
 ----------------------------------------
 --Prueba de la llamada al SP de view
 
-EXEC spDeleteProposition
+EXEC spViewProposition
     @PersonId = 1032,
     @PropositionId = 25;
 
@@ -442,7 +442,7 @@ ALTER COLUMN phone
 ADD MASKED WITH
 (
     FUNCTION = 'partial(0,"******",2)'        --partial(inicio,masked,final)
-);
+); 
 
 Resultado:
 ******77
