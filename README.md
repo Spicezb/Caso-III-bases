@@ -8,7 +8,7 @@ Al registrarse en la plataforma, los jugadores pueden asociar una o varias cuent
 
 Cada jugador inicia con un balance inicial de 100 puntos (pts) dentro de la plataforma.
 
-## Estudiantes:
+## Estudiantes
 
 * Sebastián Aguilar Villalobos, 2025072110
 * Xavier Céspedes Alvarado, 2025102887
@@ -29,15 +29,18 @@ La documentación del proyecto se organiza en las siguientes áreas:
 3. **Agentes de IA:** agentes utilizados para revisar seguridad, normalización, escalabilidad y economía del modelo.
 4. **Laboratorios técnicos:** seguridad, transacciones, concurrencia y live coding.
 5. **MVP:** backend, frontend, REST API y ejecución del proyecto.
+6. **Documentación técnica adicional:** explicación de Docker, Docker Compose, .NET y Entity Framework Core.
 
 Archivos principales:
 
-* [Diseño de tablas](Gathel/BDDesign/tablas_gathel.md)
-* [Investigación de Flyway](Gathel/docs/flywayResearch.md)
-* [Agentes de IA](Gathel/docs/Agentes%20de%20IA/)
-* [Migraciones Flyway](Gathel/flyway/sql/)
-* [Backend](Gathel/backend/Gathel.Api/)
-* [Frontend](Gathel/frontend/)
+* [Diseño de tablas](BDDesign/tablas_gathel.md)
+* [Investigación de Flyway](docs/flywayResearch.md)
+* [Docker y despliegue local](docs/docker.md)
+* [Backend .NET y uso de ORM](docs/dotnet-orm.md)
+* [Agentes de IA](docs/Agentes%20de%20IA/)
+* [Migraciones Flyway](flyway/sql/)
+* [Backend](backend/Gathel.Api/)
+* [Frontend](frontend/)
 
 ## Alcance del MVP
 
@@ -46,6 +49,7 @@ El MVP de Gathel implementa las funcionalidades principales necesarias para demo
 Funcionalidades implementadas:
 
 * Login y logout básico.
+* Registro de usuarios.
 * Visualización del balance de puntos.
 * Visualización del balance de dinero real.
 * Visualización de actividad básica del jugador en la pantalla principal.
@@ -59,6 +63,8 @@ Funcionalidades implementadas:
 * Visualización de proposiciones activas disponibles para pronosticar.
 * Realización de pronósticos utilizando puntos o dinero real.
 * Visualización de resultados e historial de pronósticos.
+* Visualización de notificaciones.
+* Visualización del perfil del jugador.
 
 El flujo avanzado del juego, como selección automática después de 24 horas, cierre de eventos, validación final de resultados, distribución de ganancias y penalizaciones, puede ejecutarse mediante Stored Procedures o scripts SQL directamente en la base de datos.
 
@@ -76,11 +82,13 @@ Caso-III-bases/
     ├── README.md
     ├── docker-compose.yml
     │
-    ├── BDDdesign/
+    ├── BDDesign/
     │   ├── Diagrama_Gathel.png
     │   └── tablas_gathel.md
     │
     ├── docs/
+    │   ├── docker.md
+    │   ├── dotnet-orm.md
     │   ├── flywayResearch.md
     │   │
     │   └── Agentes de IA/
@@ -112,6 +120,10 @@ Caso-III-bases/
     │       ├── V16__update_candidate_flow_to_parent_proposition.sql
     │       ├── V17__update_vote_candidate_one_vote_per_parent.sql
     │       └── V18__transactions_and_concurrency.sql
+    │       └── V19__update_propositions.sql
+    │       └── V20__pretty_frontend_cases.sql
+    │       └── V21__update_pts_tables.sql
+    │       └── V22__login_password_validation.sql
     │
     ├── backend/
     │   └── Gathel.Api/
@@ -156,13 +168,16 @@ Caso-III-bases/
 
 Los agentes utilizados para la revisión de la base de datos fueron:
 
-financial, normalization, scalability y security
+* Financial Integrity Agent.
+* Normalization Agent.
+* Scalability Agent.
+* Security Agent.
 
-Estos agentes fueron utilizados en ChatGPT, los archivos de estos contienen las instrucciones relacionadas a cada área, por ejemplo, el de security tiene la instrucción de revisar solamente aspectos relacionados a la seguridad del sistema.
+Estos agentes fueron utilizados en ChatGPT. Los archivos de estos contienen las instrucciones relacionadas a cada área. Por ejemplo, el agente de seguridad tiene la instrucción de revisar solamente aspectos relacionados con la seguridad del sistema.
 
-Cada agente revisó el diseño de la base de datos en cuanto al área requerida, y detectó posibles problemas o recomendaciones que mejorarían el proyecto. Estos cambios fueron aplicados en el diseño.
+Cada agente revisó el diseño de la base de datos en cuanto al área requerida y detectó posibles problemas o recomendaciones para mejorar el proyecto. Estos cambios fueron analizados y aplicados en el diseño cuando correspondía.
 
-Las respuestas/recomendaciones brindadas por los agentes pueden ser revisadas en la carpeta de docs dentro del proyecto Gathel.
+Las respuestas y recomendaciones brindadas por los agentes pueden ser revisadas en la carpeta `docs/Agentes de IA/` dentro del proyecto Gathel.
 
 ## Tecnologías utilizadas
 
@@ -186,7 +201,7 @@ Para este proyecto, Flyway se ejecuta mediante Docker Compose, por lo que no es 
 
 Flyway se encarga de ejecutar los scripts SQL versionados y registrar cuáles migraciones ya fueron aplicadas dentro de la tabla interna `flyway_schema_history`.
 
-Accede a la guía aquí para entender mejor lo que se hizo: [Investigación de Flyway](docs/flywayResearch.md)
+Mas info: [Investigación de Flyway](docs/flywayResearch.md)
 
 ## Seeding
 
@@ -206,7 +221,27 @@ También garantiza:
 * Datos realistas.
 * Relaciones válidas entre jugadores, proposiciones, predicciones, pagos y resultados.
 
-## Ejecución del proyecto
+## Backend, API y ORM
+
+El backend fue desarrollado con C# y ASP.NET Core Web API.
+
+El proyecto expone una REST API que es consumida por el frontend. Algunas de las áreas principales del backend son:
+
+* Autenticación y registro.
+* Consulta de información del jugador.
+* Creación y consulta de proposiciones.
+* Votación de proposiciones candidatas.
+* Aceptación o rechazo de proposiciones pendientes.
+* Registro de predicciones con puntos.
+* Registro de predicciones con dinero real.
+* Consulta de resultados.
+* Consulta y actualización de notificaciones.
+
+El backend utiliza Entity Framework Core como ORM para realizar lecturas principales sobre la base de datos. Para las operaciones críticas de escritura se utilizan Stored Procedures, especialmente en procesos donde se requiere mayor control transaccional o validación desde SQL Server.
+
+Más información: [Backend .NET y uso de ORM](docs/dotnet-orm.md)
+
+## Docker y despliegue local
 
 El proyecto utiliza Docker Compose para levantar los servicios necesarios del MVP:
 
@@ -215,12 +250,16 @@ El proyecto utiliza Docker Compose para levantar los servicios necesarios del MV
 * Backend ASP.NET Core Web API.
 * Frontend Next.js.
 
+La documentación técnica del uso de Docker puede consultarse en: [Docker y despliegue local](docs/docker.md)
+
+## Ejecución del proyecto
+
 ### Requisitos previos
 
 * Git.
 * Docker Desktop.
 * SQL Server Management Studio.
-* Visual Studio Code o editor equivalente.
+* Visual Studio Code
 
 No es necesario instalar Flyway manualmente, ya que se ejecuta mediante Docker Compose.
 
@@ -235,6 +274,7 @@ $env:COMPOSE_BAKE="false"
 $env:DOCKER_BUILDKIT="0"
 docker compose up --build
 ```
+
 Este comando construye y levanta los contenedores del backend, frontend, SQL Server y Flyway.
 
 Una vez levantados los servicios, se puede acceder a:
@@ -276,56 +316,56 @@ docker compose down -v
 
 Luego volver a levantar el proyecto:
 
-```bash
+```powershell
+$env:COMPOSE_BAKE="false"
+$env:DOCKER_BUILDKIT="0"
 docker compose up --build
 ```
 
 ## Estado actual del proyecto
 
-| Fase                                      | Estado                   |
-| ----------------------------------------- | ------------------------ |
-| Repositorio inicial                       | Completado               |
-| README inicial                            | Actualizado              |
-| Docker Compose con SQL Server             | Configurado              |
-| Docker Compose con Flyway                 | Configurado              |
-| Docker Compose con backend                | Configurado              |
-| Docker Compose con frontend               | Configurado              |
-| Configuración `flyway.conf`               | Configurado              |
-| Scripts SQL principales                   | Implementado             |
-| Stored Procedures principales             | Implementado             |
-| Seeding inicial                           | Implementado / en ajuste |
-| Especificación Markdown de base de datos  | Completado               |
-| DBML                                      | Completado               |
-| Diagrama PDF                              | Completado               |
-| Backend MVP                               | Implementado             |
-| Frontend MVP                              | Implementado             |
-| REST API                                  | Implementado             |
-| Login y logout                            | Implementado             |
-| Dashboard con balance de puntos y dinero  | Implementado             |
-| Creación de proposiciones                 | Implementado             |
-| Votación de propuestas candidatas         | Implementado             |
-| Aceptación o rechazo por persona objetivo | Implementado             |
-| Pronósticos con puntos o dinero real      | Implementado             |
-| Pantalla de resultados                    | Implementado             |
-| Scripts SQL de apoyo para demostración    | En progreso              |
+| Fase                                      | Estado       |
+| ----------------------------------------- | ------------ |
+| Repositorio inicial                       | Completado   |
+| README                                    | Actualizado  |
+| Docker Compose con SQL Server             | Configurado  |
+| Docker Compose con Flyway                 | Configurado  |
+| Docker Compose con backend                | Configurado  |
+| Docker Compose con frontend               | Configurado  |
+| Configuración `flyway.conf`               | Configurado  |
+| Scripts SQL principales                   | Implementado |
+| Stored Procedures principales             | Implementado |
+| Seeding inicial                           | Implementado |
+| Especificación Markdown de base de datos  | Completado   |
+| DBML                                      | Completado   |
+| Diagrama PDF                              | Completado   |
+| Backend MVP                               | Implementado |
+| Frontend MVP                              | Implementado |
+| REST API                                  | Implementado |
+| Login y logout                            | Implementado |
+| Dashboard con balance de puntos y dinero  | Implementado |
+| Creación de proposiciones                 | Implementado |
+| Votación de propuestas candidatas         | Implementado |
+| Aceptación o rechazo por persona objetivo | Implementado |
+| Pronósticos con puntos o dinero real      | Implementado |
+| Pantalla de resultados                    | Implementado |
+| Documentación técnica                     | Implementado |
 
 ## Flujo principal implementado en el MVP
 
 El flujo principal del MVP funciona de la siguiente manera:
 
-```md
+```txt
 1. Un usuario inicia sesión en Gathel.
 2. El usuario visualiza su balance de puntos, balance de dinero real y actividad básica.
 3. El usuario puede crear un Gathel para sí mismo o para otro jugador.
 4. Otros usuarios pueden agregar propuestas candidatas relacionadas con ese Gathel.
 5. Los jugadores votan por la propuesta candidata que consideran más interesante o probable.
 6. Después de 24 horas, se puede ejecutar un Stored Procedure para seleccionar la propuesta ganadora.
-7. La propuesta ganadora pasa al estado `PendingApproval`.
+7. La propuesta ganadora pasa al estado PendingApproval.
 8. La persona objetivo puede aceptar o rechazar la propuesta desde la pantalla de pendientes.
 9. Si la rechaza, la proposición se cierra y no se habilitan predicciones.
-10. Si la acepta, define las fechas de predicción y la proposición pasa al estado `Active`.
+10. Si la acepta, define las fechas de predicción y la proposición pasa al estado Active.
 11. Otros jugadores pueden realizar pronósticos utilizando puntos o dinero real.
 12. Los resultados e historial de pronósticos pueden visualizarse desde la pantalla de resultados.
 ```
-
-Algunos pasos internos del flujo se ejecutan mediante Stored Procedures o scripts SQL, lo cual se mantiene dentro del alcance permitido para el MVP.
