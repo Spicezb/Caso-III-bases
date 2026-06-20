@@ -64,7 +64,7 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <AppShell active="/dashboard">
+    <AppShell>
       <div className="mx-auto max-w-2xl">
         {errorMessage && (
           <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">

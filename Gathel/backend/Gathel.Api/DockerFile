@@ -1,0 +1,26 @@
+# =========================
+# Build
+# =========================
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY Gathel.Api.csproj ./
+RUN dotnet restore "Gathel.Api.csproj"
+
+COPY . ./
+RUN dotnet publish "Gathel.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# =========================
+# Runtime
+# =========================
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+EXPOSE 5145
+
+ENV ASPNETCORE_URLS=http://+:5145
+ENV ASPNETCORE_ENVIRONMENT=Development
+
+ENTRYPOINT ["dotnet", "Gathel.Api.dll"]

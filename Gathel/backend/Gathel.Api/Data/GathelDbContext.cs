@@ -14,6 +14,7 @@ public class GathelDbContext : DbContext
     public DbSet<Proposition> Propositions => Set<Proposition>();
     public DbSet<Prediction> Predictions => Set<Prediction>();
     public DbSet<StatusType> StatusTypes => Set<StatusType>();
+    public DbSet<PropositionVote> PropositionVotes => Set<PropositionVote>();
     public DbSet<Wallet> Wallets => Set<Wallet>();
     public DbSet<WalletBalance> WalletBalances => Set<WalletBalance>();
     public DbSet<Notification> Notifications => Set<Notification>();
@@ -96,6 +97,21 @@ public class GathelDbContext : DbContext
             entity.Property(e => e.Name).HasColumnName("name");
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.IsDeleted).HasColumnName("isDeleted");
+        });
+
+        modelBuilder.Entity<PropositionVote>(entity =>
+        {
+            entity.ToTable("propositionVotes");
+            entity.HasKey(e => e.PropositionVoteId);
+
+            entity.Property(e => e.PropositionVoteId).HasColumnName("propositionVoteId");
+            entity.Property(e => e.PropositionId).HasColumnName("propositionId");
+            entity.Property(e => e.PersonId).HasColumnName("personId");
+            entity.Property(e => e.VoteValue).HasColumnName("voteValue");
+            entity.Property(e => e.VoteDateTime).HasColumnName("voteDateTime");
+            entity.Property(e => e.IsDeleted).HasColumnName("isDeleted");
+            entity.Property(e => e.CreatedAt).HasColumnName("createdAt");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updatedAt");
         });
 
         modelBuilder.Entity<Wallet>(entity =>
