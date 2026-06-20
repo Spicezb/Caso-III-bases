@@ -8,8 +8,8 @@ VALUES
     1, -- Player, este es el rol, de aquí se heredan los permisos insertados arriba
     'usuarioPrueba1',
     'prueba',
-    '123456789',
-    '88888888',
+    '123456781',
+    '88888880',
     'usuarioPrueba1@gmail.com',
     'usuarioPrueba1Xx',
     '2000-01-01',
@@ -20,14 +20,15 @@ VALUES
     1, -- Player
     'usuarioPrueba2',
     'prueba2',
-    '123456789',
-    '88888888',
+    '123456782',
+    '88888889',
     'usuarioPrueba2@gmail.com',
     'usuarioPrueba2Xx',
     '2000-01-01',
     1,
     1
-),
+);
+GO
 
 CREATE OR ALTER FUNCTION dbo.fnHasPermission
 (
@@ -53,7 +54,7 @@ BEGIN
         INNER JOIN referenceTypes rt
             ON rt.referenceTypeId = p.referenceTypeId
         WHERE
-            pp.peopleId = @PersonId
+            pp.personId = @PersonId
             AND pt.name = @PermissionName
             AND rt.name = @ReferenceName
     )
@@ -268,19 +269,19 @@ CREATE USER SecurityTester WITHOUT LOGIN;
 DENY SELECT
 ON dbo.people
 TO SecurityTester;
+GO
 
 CREATE OR ALTER PROCEDURE spViewPeopleBasicInfo
 AS
 BEGIN
 
-    SELECT
+    SELECT TOP 10
         personId,
         username,
         name,
         lastName
     FROM people
     WHERE isDeleted = 0;
-    LIMIT 10
 
 END;
 GO
@@ -291,6 +292,7 @@ TO SecurityTester;
 
 CREATE USER MaskingTester WITHOUT LOGIN;
 GRANT SELECT ON people TO MaskingTester;
+GO
 
 CREATE FUNCTION dbo.fnWalletRLS
 (
@@ -301,7 +303,7 @@ WITH SCHEMABINDING
 AS
 RETURN
 (
-    SELECT 1
+    SELECT 1 AS Result
     WHERE @PersonId =
         CAST(SESSION_CONTEXT(N'PersonId') AS INT)
 );

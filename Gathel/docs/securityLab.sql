@@ -143,7 +143,7 @@ VALUES
     '123456789',
     '88888888',
     'usuarioPrueba1@gmail.com',
-    'usuarioPrueba1Xx',
+    'usuarioPrueba1Xx',    --id 1032
     '2000-01-01',
     1,
     1
@@ -155,7 +155,7 @@ VALUES
     '123456789',
     '88888888',
     'usuarioPrueba2@gmail.com',
-    'usuarioPrueba2Xx',
+    'usuarioPrueba2Xx',     --id 1033
     '2000-01-01',
     1,
     1
@@ -193,12 +193,12 @@ WHERE
 
 INSERT INTO peoplePermissions
 (
-    peopleId,
+    personId,
     permissionId
 )
 SELECT
     p.personId,
-    42           --id del permiso, se puede buscar con la consulta anterior
+    151           --id del permiso, se puede buscar con la consulta anterior
 FROM people p
 WHERE p.username = 'usuarioPrueba2Xx';
 
@@ -361,7 +361,7 @@ GO
 --Prueba de la llamada al SP de delete
 
 EXEC spDeleteProposition
-    @PersonId = 1001,
+    @PersonId = 1032,
     @PropositionId = 25;
 
 ----------------------------------------
@@ -409,7 +409,7 @@ GO
 --Prueba de la llamada al SP de view
 
 EXEC spDeleteProposition
-    @PersonId = 1001,
+    @PersonId = 1032,
     @PropositionId = 25;
 
 
@@ -484,7 +484,7 @@ Ejemplo:
 
 Función de filtro
 
-CREATE FUNCTION fnWalletSecurity
+CREATE FUNCTION dbo.fnWalletRLS
 (
     @PersonId INT
 )
@@ -493,10 +493,11 @@ WITH SCHEMABINDING
 AS
 RETURN
 (
-    SELECT 1
+    SELECT 1 AS Result
     WHERE @PersonId =
-        CAST(SESSION_CONTEXT(N'PersonId') AS INT)    --La función filtra la tabla de acuerdo al personId
+        CAST(SESSION_CONTEXT(N'PersonId') AS INT)
 );
+GO
 
 Posteriormente se crea un policy
 
@@ -594,7 +595,7 @@ GO
 ---------------------------------------
 --Uso del SP con clave cifrada
 
-EXEC spCreateUserEncrypted
+EXEC spCreateUserEncrypted                --id 1034
     @PeopleTypeId = 1,
     @Name = 'Miguel',
     @LastName = 'Prueba',

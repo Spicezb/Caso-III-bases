@@ -10,14 +10,13 @@ CREATE OR ALTER PROCEDURE spViewPeopleBasicInfo
 AS
 BEGIN
 
-    SELECT
+    SELECT TOP 10
         personId,
         username,
         name,
         lastName
     FROM people
     WHERE isDeleted = 0;
-    LIMIT 10
 
 END;
 GO
@@ -40,11 +39,12 @@ REVERT;
 
 -- Data Masking
 
+--Masking de algunos datos sensibles o personales en la tabla people
+
 ALTER TABLE people
 ALTER COLUMN email
 ADD MASKED WITH (FUNCTION = 'email()');
 
---Masking de algunos datos sensibles o personales en la tabla people
 ALTER TABLE people
 ALTER COLUMN identification
 ADD MASKED WITH
@@ -84,6 +84,11 @@ FROM people;
 
 
 --RLS
+
+--Activar política
+ALTER SECURITY POLICY WalletSecurityPolicy
+WITH (STATE = ON);
+
 CREATE FUNCTION dbo.fnWalletRLS
 (
     @PersonId INT
@@ -93,7 +98,7 @@ WITH SCHEMABINDING
 AS
 RETURN
 (
-    SELECT 1
+    SELECT 1 AS Result
     WHERE @PersonId =
         CAST(SESSION_CONTEXT(N'PersonId') AS INT)
 );
@@ -126,3 +131,7 @@ FROM wallets;
 EXEC sp_set_session_context
     @key = N'PersonId',
     @value = NULL;
+
+--Desactivar política
+ALTER SECURITY POLICY WalletSecurityPolicy
+WITH (STATE = OFF);
