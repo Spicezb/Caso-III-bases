@@ -533,7 +533,7 @@ GO
 ------------------------------------------------
 -- SP para user con password cifrada
 
-CREATE OR ALTER PROCEDURE spCreateUser
+CREATE OR ALTER PROCEDURE spCreateUserEncrypted
 (
     @PeopleTypeId INT,
     @Name VARCHAR(60),
@@ -594,7 +594,7 @@ GO
 ---------------------------------------
 --Uso del SP con clave cifrada
 
-EXEC spCreateUser
+EXEC spCreateUserEncrypted
     @PeopleTypeId = 1,
     @Name = 'Miguel',
     @LastName = 'Prueba',
