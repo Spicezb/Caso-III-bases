@@ -201,7 +201,7 @@ Para este proyecto, Flyway se ejecuta mediante Docker Compose, por lo que no es 
 
 Flyway se encarga de ejecutar los scripts SQL versionados y registrar cuáles migraciones ya fueron aplicadas dentro de la tabla interna `flyway_schema_history`.
 
-Mas info: [Investigación de Flyway](docs/flywayResearch.md)
+Mas info: [Investigación de Flyway](Gathel/docs/flywayResearch.md)
 
 ## Seeding
 
@@ -239,7 +239,7 @@ El proyecto expone una REST API que es consumida por el frontend. Algunas de las
 
 El backend utiliza Entity Framework Core como ORM para realizar lecturas principales sobre la base de datos. Para las operaciones críticas de escritura se utilizan Stored Procedures, especialmente en procesos donde se requiere mayor control transaccional o validación desde SQL Server.
 
-Más información: [Backend .NET y uso de ORM](docs/dotnet-orm.md)
+Más información: [Backend .NET y uso de ORM](Gathel/docs/dotnet-orm.md)
 
 ## Docker y despliegue local
 
@@ -250,7 +250,7 @@ El proyecto utiliza Docker Compose para levantar los servicios necesarios del MV
 * Backend ASP.NET Core Web API.
 * Frontend Next.js.
 
-La documentación técnica del uso de Docker puede consultarse en: [Docker y despliegue local](docs/docker.md)
+La documentación técnica del uso de Docker puede consultarse en: [Docker y despliegue local](Gathel/docs/docker.md)
 
 ## Ejecución del proyecto
 
